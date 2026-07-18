@@ -1,0 +1,6 @@
+{
+  "name": "BalanceCare Health Services",
+  "description": "Integrated mental and behavioral health care services guiding individuals toward lasting mental wellness with compassionate, patient-centered care.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
