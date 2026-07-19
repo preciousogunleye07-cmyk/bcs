@@ -46,7 +46,7 @@ export default function ServicesSection({
     },
     {
       id: 'srv-homehealth',
-      title: 'Home Health Services',
+      title: 'Home Health Care & DDA Waiver Services',
       icon: 'homehealth',
       description: 'Specialized in-home psychiatric care, daily wellness support, and customized medication monitoring inside your comfortable private residence.',
       longDescription: 'Our Home Health division bridges the gap between clinical settings and independent living. We provide certified in-home psychiatric nurse visits, mental health check-ins, daily cognitive stimulation exercises, and personalized safety coaching tailored for limited-mobility patients or seniors.',
@@ -157,7 +157,7 @@ export default function ServicesSection({
           </button>
         </motion.div>
 
-        {/* Service Card 3: Home Health Services */}
+        {/* Service Card 3: Home Health Care & DDA Waiver Services */}
         <motion.div 
           initial={{ opacity: 0, y: 30 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -174,7 +174,7 @@ export default function ServicesSection({
                 referrerPolicy="no-referrer"
               />
             </div>
-            <h3 className="text-xl font-extrabold text-brand-dark mb-3">Home Health Services</h3>
+            <h3 className="text-xl font-extrabold text-brand-dark mb-3">Home Health Care & DDA Waiver Services</h3>
             <p className="text-brand-muted mb-6 text-xs leading-relaxed">
               Specialized in-home psychiatric care, daily wellness support, and customized medication monitoring inside your comfortable private residence.
             </p>
