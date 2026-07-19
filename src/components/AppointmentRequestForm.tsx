@@ -190,6 +190,9 @@ export default function AppointmentRequestForm({ isOpen, onClose }: AppointmentR
 
   const resetForms = () => {
     setIsSubmitted(false);
+    setNewClientDobParts({ month: '', day: '', year: '' });
+    setPolicyHolderDobParts({ month: '', day: '', year: '' });
+    setReturningClientDobParts({ month: '', day: '', year: '' });
     setNewClientData({
       fullName: '',
       dob: '',
@@ -243,6 +246,97 @@ export default function AppointmentRequestForm({ isOpen, onClose }: AppointmentR
     });
   };
 
+  // Split DOB States for New Client, Policy Holder, and Returning Client
+  const [newClientDobManual, setNewClientDobManual] = useState(true);
+  const [newClientDobParts, setNewClientDobParts] = useState({ month: '', day: '', year: '' });
+
+  const [policyHolderDobManual, setPolicyHolderDobManual] = useState(true);
+  const [policyHolderDobParts, setPolicyHolderDobParts] = useState({ month: '', day: '', year: '' });
+
+  const [returningClientDobManual, setReturningClientDobManual] = useState(true);
+  const [returningClientDobParts, setReturningClientDobParts] = useState({ month: '', day: '', year: '' });
+
+  const handleNewClientDobChange = (field: 'month' | 'day' | 'year', val: string) => {
+    const updated = { ...newClientDobParts, [field]: val };
+    setNewClientDobParts(updated);
+    if (updated.year && updated.month && updated.day) {
+      const y = updated.year.trim();
+      const m = updated.month.padStart(2, '0');
+      const d = updated.day.padStart(2, '0');
+      setNewClientData(prev => ({ ...prev, dob: `${y}-${m}-${d}` }));
+    } else {
+      setNewClientData(prev => ({ ...prev, dob: '' }));
+    }
+  };
+
+  const enableNewClientDobManual = (manual: boolean) => {
+    setNewClientDobManual(manual);
+    if (manual && newClientData.dob) {
+      const match = newClientData.dob.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+      if (match) {
+        setNewClientDobParts({
+          year: match[1],
+          month: String(parseInt(match[2], 10)),
+          day: String(parseInt(match[3], 10))
+        });
+      }
+    }
+  };
+
+  const handlePolicyHolderDobChange = (field: 'month' | 'day' | 'year', val: string) => {
+    const updated = { ...policyHolderDobParts, [field]: val };
+    setPolicyHolderDobParts(updated);
+    if (updated.year && updated.month && updated.day) {
+      const y = updated.year.trim();
+      const m = updated.month.padStart(2, '0');
+      const d = updated.day.padStart(2, '0');
+      setNewClientData(prev => ({ ...prev, policyHolderDob: `${y}-${m}-${d}` }));
+    } else {
+      setNewClientData(prev => ({ ...prev, policyHolderDob: '' }));
+    }
+  };
+
+  const enablePolicyHolderDobManual = (manual: boolean) => {
+    setPolicyHolderDobManual(manual);
+    if (manual && newClientData.policyHolderDob) {
+      const match = newClientData.policyHolderDob.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+      if (match) {
+        setPolicyHolderDobParts({
+          year: match[1],
+          month: String(parseInt(match[2], 10)),
+          day: String(parseInt(match[3], 10))
+        });
+      }
+    }
+  };
+
+  const handleReturningClientDobChange = (field: 'month' | 'day' | 'year', val: string) => {
+    const updated = { ...returningClientDobParts, [field]: val };
+    setReturningClientDobParts(updated);
+    if (updated.year && updated.month && updated.day) {
+      const y = updated.year.trim();
+      const m = updated.month.padStart(2, '0');
+      const d = updated.day.padStart(2, '0');
+      setReturningClientData(prev => ({ ...prev, dob: `${y}-${m}-${d}` }));
+    } else {
+      setReturningClientData(prev => ({ ...prev, dob: '' }));
+    }
+  };
+
+  const enableReturningClientDobManual = (manual: boolean) => {
+    setReturningClientDobManual(manual);
+    if (manual && returningClientData.dob) {
+      const match = returningClientData.dob.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+      if (match) {
+        setReturningClientDobParts({
+          year: match[1],
+          month: String(parseInt(match[2], 10)),
+          day: String(parseInt(match[3], 10))
+        });
+      }
+    }
+  };
+
   if (!isOpen) return null;
 
   return (
@@ -288,7 +382,8 @@ export default function AppointmentRequestForm({ isOpen, onClose }: AppointmentR
                     : 'text-white/80 hover:text-white'
                 }`}
               >
-                New Client Intake Form
+                <span className="hidden sm:inline">New Client Intake</span>
+                <span className="sm:hidden">New Client</span>
               </button>
               <button
                 type="button"
@@ -299,7 +394,8 @@ export default function AppointmentRequestForm({ isOpen, onClose }: AppointmentR
                     : 'text-white/80 hover:text-white'
                 }`}
               >
-                Returning Client Form
+                <span className="hidden sm:inline">Returning Client</span>
+                <span className="sm:hidden">Returning</span>
               </button>
             </div>
           )}
@@ -413,18 +509,81 @@ export default function AppointmentRequestForm({ isOpen, onClose }: AppointmentR
                           />
                         </div>
 
-                        <div className="md:col-span-3">
-                          <label className="block text-xs font-bold text-brand-dark mb-1.5">Date of Birth <span className="text-brand-coral">*</span></label>
-                          <input
-                            type="date"
-                            required
-                            value={newClientData.dob}
-                            onChange={e => setNewClientData({ ...newClientData, dob: e.target.value })}
-                            className="w-full p-3 bg-neutral-50 border border-neutral-200 rounded-xl text-sm focus:ring-2 focus:ring-brand-coral/20 focus:border-brand-coral outline-none text-brand-muted"
-                          />
+                        <div className="md:col-span-4">
+                          <label className="block text-xs font-bold text-brand-dark mb-1.5 flex justify-between items-center">
+                            <span>Date of Birth <span className="text-brand-coral">*</span></span>
+                            <button
+                              type="button"
+                              onClick={() => enableNewClientDobManual(!newClientDobManual)}
+                              className="text-[10px] font-bold text-brand-blue hover:text-brand-blueHover transition-colors focus:outline-none"
+                            >
+                              {newClientDobManual ? '📅 Use Picker' : '⌨️ Type Year'}
+                            </button>
+                          </label>
+
+                          {newClientDobManual ? (
+                            <div className="grid grid-cols-12 gap-1.5">
+                              <div className="col-span-5">
+                                <select
+                                  required
+                                  value={newClientDobParts.month}
+                                  onChange={e => handleNewClientDobChange('month', e.target.value)}
+                                  className="w-full p-2.5 bg-neutral-50 border border-neutral-200 rounded-xl text-xs focus:ring-2 focus:ring-brand-coral/20 focus:border-brand-coral outline-none text-brand-dark"
+                                >
+                                  <option value="">Month</option>
+                                  {Array.from({ length: 12 }, (_, i) => {
+                                    const m = i + 1;
+                                    return (
+                                      <option key={m} value={String(m)}>
+                                        {new Date(2000, i).toLocaleString('default', { month: 'short' })}
+                                      </option>
+                                    );
+                                  })}
+                                </select>
+                              </div>
+                              <div className="col-span-3">
+                                <input
+                                  type="text"
+                                  required
+                                  placeholder="DD"
+                                  maxLength={2}
+                                  value={newClientDobParts.day}
+                                  onChange={e => {
+                                    const val = e.target.value.replace(/\D/g, '');
+                                    if (val === '' || (parseInt(val, 10) >= 1 && parseInt(val, 10) <= 31)) {
+                                      handleNewClientDobChange('day', val);
+                                    }
+                                  }}
+                                  className="w-full p-2.5 bg-neutral-50 border border-neutral-200 rounded-xl text-xs text-center focus:ring-2 focus:ring-brand-coral/20 focus:border-brand-coral outline-none"
+                                />
+                              </div>
+                              <div className="col-span-4">
+                                <input
+                                  type="text"
+                                  required
+                                  placeholder="YYYY"
+                                  maxLength={4}
+                                  value={newClientDobParts.year}
+                                  onChange={e => {
+                                    const val = e.target.value.replace(/\D/g, '');
+                                    handleNewClientDobChange('year', val);
+                                  }}
+                                  className="w-full p-2.5 bg-neutral-50 border border-neutral-200 rounded-xl text-xs text-center focus:ring-2 focus:ring-brand-coral/20 focus:border-brand-coral outline-none"
+                                />
+                              </div>
+                            </div>
+                          ) : (
+                            <input
+                              type="date"
+                              required
+                              value={newClientData.dob}
+                              onChange={e => setNewClientData({ ...newClientData, dob: e.target.value })}
+                              className="w-full p-3 bg-neutral-50 border border-neutral-200 rounded-xl text-sm focus:ring-2 focus:ring-brand-coral/20 focus:border-brand-coral outline-none text-brand-muted"
+                            />
+                          )}
                         </div>
 
-                        <div className="md:col-span-3">
+                        <div className="md:col-span-2">
                           <label className="block text-xs font-bold text-brand-dark mb-1.5">Age</label>
                           <input
                             type="number"
@@ -657,14 +816,77 @@ export default function AppointmentRequestForm({ isOpen, onClose }: AppointmentR
                             />
                           </div>
                           <div>
-                            <label className="block text-xs font-bold text-brand-dark mb-1.5">Policy Holder DOB <span className="text-brand-coral">*</span></label>
-                            <input
-                              type="date"
-                              required={newClientData.paymentMethod === 'Insurance'}
-                              value={newClientData.policyHolderDob}
-                              onChange={e => setNewClientData({ ...newClientData, policyHolderDob: e.target.value })}
-                              className="w-full p-3 bg-neutral-50 border border-neutral-200 rounded-xl text-sm focus:ring-2 focus:ring-brand-coral/20 focus:border-brand-coral outline-none text-brand-muted"
-                            />
+                            <label className="block text-xs font-bold text-brand-dark mb-1.5 flex justify-between items-center">
+                              <span>Policy Holder DOB <span className="text-brand-coral">*</span></span>
+                              <button
+                                type="button"
+                                onClick={() => enablePolicyHolderDobManual(!policyHolderDobManual)}
+                                className="text-[10px] font-bold text-brand-blue hover:text-brand-blueHover transition-colors focus:outline-none"
+                              >
+                                {policyHolderDobManual ? '📅 Use Picker' : '⌨️ Type Year'}
+                              </button>
+                            </label>
+
+                            {policyHolderDobManual ? (
+                              <div className="grid grid-cols-12 gap-1.5">
+                                <div className="col-span-5">
+                                  <select
+                                    required={newClientData.paymentMethod === 'Insurance'}
+                                    value={policyHolderDobParts.month}
+                                    onChange={e => handlePolicyHolderDobChange('month', e.target.value)}
+                                    className="w-full p-2.5 bg-neutral-50 border border-neutral-200 rounded-xl text-xs focus:ring-2 focus:ring-brand-coral/20 focus:border-brand-coral outline-none text-brand-dark"
+                                  >
+                                    <option value="">Month</option>
+                                    {Array.from({ length: 12 }, (_, i) => {
+                                      const m = i + 1;
+                                      return (
+                                        <option key={m} value={String(m)}>
+                                          {new Date(2000, i).toLocaleString('default', { month: 'short' })}
+                                        </option>
+                                      );
+                                    })}
+                                  </select>
+                                </div>
+                                <div className="col-span-3">
+                                  <input
+                                    type="text"
+                                    required={newClientData.paymentMethod === 'Insurance'}
+                                    placeholder="DD"
+                                    maxLength={2}
+                                    value={policyHolderDobParts.day}
+                                    onChange={e => {
+                                      const val = e.target.value.replace(/\D/g, '');
+                                      if (val === '' || (parseInt(val, 10) >= 1 && parseInt(val, 10) <= 31)) {
+                                        handlePolicyHolderDobChange('day', val);
+                                      }
+                                    }}
+                                    className="w-full p-2.5 bg-neutral-50 border border-neutral-200 rounded-xl text-xs text-center focus:ring-2 focus:ring-brand-coral/20 focus:border-brand-coral outline-none"
+                                  />
+                                </div>
+                                <div className="col-span-4">
+                                  <input
+                                    type="text"
+                                    required={newClientData.paymentMethod === 'Insurance'}
+                                    placeholder="YYYY"
+                                    maxLength={4}
+                                    value={policyHolderDobParts.year}
+                                    onChange={e => {
+                                      const val = e.target.value.replace(/\D/g, '');
+                                      handlePolicyHolderDobChange('year', val);
+                                    }}
+                                    className="w-full p-2.5 bg-neutral-50 border border-neutral-200 rounded-xl text-xs text-center focus:ring-2 focus:ring-brand-coral/20 focus:border-brand-coral outline-none"
+                                  />
+                                </div>
+                              </div>
+                            ) : (
+                              <input
+                                type="date"
+                                required={newClientData.paymentMethod === 'Insurance'}
+                                value={newClientData.policyHolderDob}
+                                onChange={e => setNewClientData({ ...newClientData, policyHolderDob: e.target.value })}
+                                className="w-full p-3 bg-neutral-50 border border-neutral-200 rounded-xl text-sm focus:ring-2 focus:ring-brand-coral/20 focus:border-brand-coral outline-none text-brand-muted"
+                              />
+                            )}
                           </div>
                           <div>
                             <label className="block text-xs font-bold text-brand-dark mb-1.5">Relationship to Policy Holder <span className="text-brand-coral">*</span></label>
@@ -836,14 +1058,77 @@ export default function AppointmentRequestForm({ isOpen, onClose }: AppointmentR
                         </div>
 
                         <div className="md:col-span-4">
-                          <label className="block text-xs font-bold text-brand-dark mb-1.5">Date of Birth <span className="text-brand-coral">*</span></label>
-                          <input
-                            type="date"
-                            required
-                            value={returningClientData.dob}
-                            onChange={e => setReturningClientData({ ...returningClientData, dob: e.target.value })}
-                            className="w-full p-3 bg-neutral-50 border border-neutral-200 rounded-xl text-sm focus:ring-2 focus:ring-brand-coral/20 focus:border-brand-coral outline-none text-brand-muted"
-                          />
+                          <label className="block text-xs font-bold text-brand-dark mb-1.5 flex justify-between items-center">
+                            <span>Date of Birth <span className="text-brand-coral">*</span></span>
+                            <button
+                              type="button"
+                              onClick={() => enableReturningClientDobManual(!returningClientDobManual)}
+                              className="text-[10px] font-bold text-brand-blue hover:text-brand-blueHover transition-colors focus:outline-none"
+                            >
+                              {returningClientDobManual ? '📅 Use Picker' : '⌨️ Type Year'}
+                            </button>
+                          </label>
+
+                          {returningClientDobManual ? (
+                            <div className="grid grid-cols-12 gap-1.5">
+                              <div className="col-span-5">
+                                <select
+                                  required
+                                  value={returningClientDobParts.month}
+                                  onChange={e => handleReturningClientDobChange('month', e.target.value)}
+                                  className="w-full p-2.5 bg-neutral-50 border border-neutral-200 rounded-xl text-xs focus:ring-2 focus:ring-brand-coral/20 focus:border-brand-coral outline-none text-brand-dark"
+                                >
+                                  <option value="">Month</option>
+                                  {Array.from({ length: 12 }, (_, i) => {
+                                    const m = i + 1;
+                                    return (
+                                      <option key={m} value={String(m)}>
+                                        {new Date(2000, i).toLocaleString('default', { month: 'short' })}
+                                      </option>
+                                    );
+                                  })}
+                                </select>
+                              </div>
+                              <div className="col-span-3">
+                                <input
+                                  type="text"
+                                  required
+                                  placeholder="DD"
+                                  maxLength={2}
+                                  value={returningClientDobParts.day}
+                                  onChange={e => {
+                                    const val = e.target.value.replace(/\D/g, '');
+                                    if (val === '' || (parseInt(val, 10) >= 1 && parseInt(val, 10) <= 31)) {
+                                      handleReturningClientDobChange('day', val);
+                                    }
+                                  }}
+                                  className="w-full p-2.5 bg-neutral-50 border border-neutral-200 rounded-xl text-xs text-center focus:ring-2 focus:ring-brand-coral/20 focus:border-brand-coral outline-none"
+                                />
+                              </div>
+                              <div className="col-span-4">
+                                <input
+                                  type="text"
+                                  required
+                                  placeholder="YYYY"
+                                  maxLength={4}
+                                  value={returningClientDobParts.year}
+                                  onChange={e => {
+                                    const val = e.target.value.replace(/\D/g, '');
+                                    handleReturningClientDobChange('year', val);
+                                  }}
+                                  className="w-full p-2.5 bg-neutral-50 border border-neutral-200 rounded-xl text-xs text-center focus:ring-2 focus:ring-brand-coral/20 focus:border-brand-coral outline-none"
+                                />
+                              </div>
+                            </div>
+                          ) : (
+                            <input
+                              type="date"
+                              required
+                              value={returningClientData.dob}
+                              onChange={e => setReturningClientData({ ...returningClientData, dob: e.target.value })}
+                              className="w-full p-3 bg-neutral-50 border border-neutral-200 rounded-xl text-sm focus:ring-2 focus:ring-brand-coral/20 focus:border-brand-coral outline-none text-brand-muted"
+                            />
+                          )}
                         </div>
 
                         <div className="md:col-span-6">
