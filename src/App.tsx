@@ -335,6 +335,7 @@ export default function App() {
             <ActionGrid 
               preselectedService={preselectedService} 
               clearPreselectedService={() => setPreselectedService(undefined)} 
+              onRequestAppointment={() => setIsRequestModalOpen(true)}
             />
 
             {/* 9. Our Locations & Interactive Google Maps */}

@@ -251,15 +251,16 @@ export default function ServicesSection({
 
               {/* Action buttons on modal footer */}
               <div className="p-6 border-t border-gray-100 flex gap-4 bg-gray-50 shrink-0">
-                <a 
-                  href="https://intakeq.com/new/lgmlqn"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  onClick={() => setSelectedService(null)}
+                <button 
+                  type="button"
+                  onClick={() => {
+                    onBookService(selectedService.title);
+                    setSelectedService(null);
+                  }}
                   className="flex-1 bg-gradient-to-r from-brand-green to-brand-blue hover:from-brand-greenHover hover:to-brand-blueHover text-white font-bold py-3.5 px-6 rounded-xl text-xs text-center transition-all shadow-md shadow-brand-blue/15 flex items-center justify-center gap-1.5 cursor-pointer"
                 >
                   <Calendar className="w-4 h-4" /> Book Consultation
-                </a>
+                </button>
                 <button 
                   onClick={() => setSelectedService(null)}
                   className="flex-1 border border-neutral-200 bg-white text-brand-dark hover:bg-neutral-50 font-bold py-3.5 px-6 rounded-xl text-xs text-center transition-colors cursor-pointer"
