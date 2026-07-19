@@ -179,12 +179,16 @@ export default function ActionGrid({
   // Trigger appointment modal from main page if preselectedService changes
   React.useEffect(() => {
     if (preselectedService) {
-      setBookingData(prev => ({ ...prev, serviceId: preselectedService }));
-      setBookingStep(1);
-      setBookingSuccessData(null);
-      setActiveModal('appointment');
+      if (onRequestAppointment) {
+        onRequestAppointment();
+      } else {
+        setBookingData(prev => ({ ...prev, serviceId: preselectedService }));
+        setBookingStep(1);
+        setBookingSuccessData(null);
+        setActiveModal('appointment');
+      }
     }
-  }, [preselectedService]);
+  }, [preselectedService, onRequestAppointment]);
 
   const closeAppointmentModal = () => {
     setActiveModal('none');
@@ -293,7 +297,14 @@ export default function ActionGrid({
 
               <div className="mt-8 pt-4 border-t border-neutral-100 flex justify-end">
                 <button 
-                  onClick={() => { setActiveModal('none'); handleOpenAppointment(); }}
+                  onClick={() => { 
+                    setActiveModal('none'); 
+                    if (onRequestAppointment) {
+                      onRequestAppointment();
+                    } else {
+                      handleOpenAppointment(); 
+                    }
+                  }}
                   className="bg-gradient-to-r from-brand-green to-brand-blue hover:from-brand-greenHover hover:to-brand-blueHover text-white font-bold py-3 px-6 rounded-full text-xs transition-colors cursor-pointer"
                 >
                   Book with a Specialist

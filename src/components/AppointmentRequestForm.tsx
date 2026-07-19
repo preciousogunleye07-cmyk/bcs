@@ -9,11 +9,12 @@ import {
 interface AppointmentRequestFormProps {
   isOpen: boolean;
   onClose: () => void;
+  preselectedService?: string;
 }
 
 type FormTab = 'new-client' | 'returning-client';
 
-export default function AppointmentRequestForm({ isOpen, onClose }: AppointmentRequestFormProps) {
+export default function AppointmentRequestForm({ isOpen, onClose, preselectedService }: AppointmentRequestFormProps) {
   const [activeTab, setActiveTab] = useState<FormTab>('new-client');
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [formTypeSubmitted, setFormTypeSubmitted] = useState<FormTab>('new-client');
@@ -99,6 +100,42 @@ export default function AppointmentRequestForm({ isOpen, onClose }: AppointmentR
     // Consent
     consentUnderstand: false
   });
+
+  // Automatically pre-check corresponding checkboxes if there's a preselected service
+  React.useEffect(() => {
+    if (isOpen && preselectedService) {
+      let matchedReason = '';
+      const serviceLower = preselectedService.toLowerCase();
+      if (serviceLower.includes('depression')) {
+        matchedReason = 'Depression';
+      } else if (serviceLower.includes('anxiety')) {
+        matchedReason = 'Anxiety';
+      } else if (serviceLower.includes('home health') || serviceLower.includes('dda') || serviceLower.includes('waiver')) {
+        matchedReason = 'Home Healthcare Services';
+      } else if (serviceLower.includes('telehealth')) {
+        matchedReason = 'Companion Care';
+      } else if (serviceLower.includes('medication')) {
+        matchedReason = 'Medication Management';
+      }
+
+      if (matchedReason) {
+        setNewClientData(prev => {
+          if (prev.reasons.includes(matchedReason)) return prev;
+          return {
+            ...prev,
+            reasons: [...prev.reasons, matchedReason]
+          };
+        });
+        setReturningClientData(prev => {
+          if (prev.reasons.includes(matchedReason)) return prev;
+          return {
+            ...prev,
+            reasons: [...prev.reasons, matchedReason]
+          };
+        });
+      }
+    }
+  }, [isOpen, preselectedService]);
 
   // Form step indicators (if we want step wizard, but since the form is a standard paper structure, we can segment it into logical scrollable sections with tabs, giving a clean and high-fidelity form feel)
   

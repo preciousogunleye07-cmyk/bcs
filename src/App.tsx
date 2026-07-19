@@ -585,7 +585,11 @@ export default function App() {
         {isRequestModalOpen && (
           <AppointmentRequestForm 
             isOpen={isRequestModalOpen} 
-            onClose={() => setIsRequestModalOpen(false)} 
+            onClose={() => {
+              setIsRequestModalOpen(false);
+              setPreselectedService(undefined);
+            }} 
+            preselectedService={preselectedService}
           />
         )}
       </AnimatePresence>

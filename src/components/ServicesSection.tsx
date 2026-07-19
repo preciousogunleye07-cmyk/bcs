@@ -48,13 +48,13 @@ export default function ServicesSection({
       id: 'srv-homehealth',
       title: 'Home Health Care & DDA Waiver Services',
       icon: 'homehealth',
-      description: 'Specialized in-home psychiatric care, daily wellness support, and customized medication monitoring inside your comfortable private residence.',
-      longDescription: 'Our Home Health division bridges the gap between clinical settings and independent living. We provide certified in-home psychiatric nurse visits, mental health check-ins, daily cognitive stimulation exercises, and personalized safety coaching tailored for limited-mobility patients or seniors.',
+      description: 'Person-centered care promoting independence and dignity. We provide respite care, direct support, and behavioral support plans tailored to each individual\'s unique needs.',
+      longDescription: 'Our Home Health Care and DDA Waiver services cover a comprehensive range of professional supports designed to help clients thrive in their homes and communities. We specialize in providing person-centered care that respects the unique background, strengths, and goals of each individual.',
       benefits: [
-        'Routine professional in-home welfare checks',
-        'Assisted administration and monitoring of medications',
-        'Tailored therapeutic routines in familiar environments',
-        'Direct care updates shared with families and primary physicians'
+        'Respite Care (hourly and daily options)',
+        'Direct Support Professionals (DSP) assistance',
+        'Professional & Paraprofessional Behavioral Support',
+        'Host Home Providers & Companion Services'
       ]
     },
     {
@@ -176,7 +176,8 @@ export default function ServicesSection({
             </div>
             <h3 className="text-xl font-extrabold text-brand-dark mb-3">Home Health Care & DDA Waiver Services</h3>
             <p className="text-brand-muted mb-6 text-xs leading-relaxed">
-              Specialized in-home psychiatric care, daily wellness support, and customized medication monitoring inside your comfortable private residence.
+              <strong className="block text-brand-dark font-extrabold mb-1.5 uppercase tracking-wider text-[10px] opacity-80">Service Overview</strong>
+              {servicesData[2].description}
             </p>
           </div>
           <button 
