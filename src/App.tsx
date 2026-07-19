@@ -8,6 +8,7 @@ import ServicesSection from './components/ServicesSection';
 import ActionGrid from './components/ActionGrid';
 import CookieBanner from './components/CookieBanner';
 import WhatWeDoView from './components/WhatWeDoView';
+import AppointmentRequestForm from './components/AppointmentRequestForm';
 
 export default function App() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -16,6 +17,7 @@ export default function App() {
   const [showScrollTop, setShowScrollTop] = useState(false);
   const [copied, setCopied] = useState(false);
   const [currentView, setCurrentView] = useState<'home' | 'what-we-do'>('home');
+  const [isRequestModalOpen, setIsRequestModalOpen] = useState(false);
 
   const handleShareClick = () => {
     navigator.clipboard.writeText(window.location.href);
@@ -87,20 +89,7 @@ export default function App() {
   // Callback when user clicks "FIND CARE" or service booking
   const handleServiceSelect = (serviceName: string) => {
     setPreselectedService(serviceName);
-    if (currentView !== 'home') {
-      setCurrentView('home');
-      setTimeout(() => {
-        const element = document.getElementById('professionals');
-        if (element) {
-          element.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }
-      }, 100);
-    } else {
-      const element = document.getElementById('professionals');
-      if (element) {
-        element.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      }
-    }
+    setIsRequestModalOpen(true);
   };
 
   return (
@@ -209,15 +198,13 @@ export default function App() {
 
             {/* Navigation CTA */}
             <div className="hidden md:block">
-              <a 
-                href="https://intakeq.com/new/lgmlqn" 
-                target="_blank"
-                rel="noopener noreferrer"
+              <button 
+                onClick={() => setIsRequestModalOpen(true)}
                 className="inline-flex items-center gap-1.5 bg-gradient-to-r from-brand-green to-brand-blue hover:from-brand-greenHover hover:to-brand-blueHover text-white px-6 py-3 rounded-full text-sm font-bold shadow-md shadow-brand-blue/15 hover:shadow-brand-blue/30 transition-all cursor-pointer"
               >
                 <MessageSquare className="w-4 h-4" />
-                <span>Need Help?</span>
-              </a>
+                <span>Request Appointment</span>
+              </button>
             </div>
 
             {/* Mobile Menu Button */}
@@ -276,14 +263,12 @@ export default function App() {
               >
                 Our Locations
               </button>
-              <a 
-                href="https://intakeq.com/new/lgmlqn" 
-                target="_blank"
-                rel="noopener noreferrer"
-                className="block w-full text-center py-4 bg-gradient-to-r from-brand-green to-brand-blue hover:from-brand-greenHover hover:to-brand-blueHover text-white font-bold rounded-2xl text-base mt-4 shadow-sm"
+              <button 
+                onClick={() => { setMobileMenuOpen(false); setIsRequestModalOpen(true); }}
+                className="block w-full text-center py-4 bg-gradient-to-r from-brand-green to-brand-blue hover:from-brand-greenHover hover:to-brand-blueHover text-white font-bold rounded-2xl text-base mt-4 shadow-sm cursor-pointer"
               >
-                Need Help?
-              </a>
+                Request Appointment
+              </button>
             </motion.div>
           )}
         </AnimatePresence>
@@ -505,7 +490,6 @@ export default function App() {
                   className="h-8 w-auto object-contain brightness-0 invert transition-transform group-hover:scale-105"
                   referrerPolicy="no-referrer"
                 />
-                <span className="font-extrabold text-xl tracking-tight text-white">BalanceCare</span>
               </button>
               <p className="text-gray-400 max-w-sm text-sm leading-relaxed font-medium">
                 Guiding individuals toward lasting mental wellness and behavioral peace through compassionate, highly personalized clinical care pathways.
@@ -521,7 +505,7 @@ export default function App() {
                 <li><a href="#services" onClick={(e) => handleScrollTo(e, 'services')} className="text-gray-300 hover:text-brand-coral transition-colors">What We Do</a></li>
                 <li><a href="#professionals" onClick={(e) => handleScrollTo(e, 'professionals')} className="text-gray-300 hover:text-brand-coral transition-colors">Work With Us</a></li>
                 <li><a href="#locations" onClick={(e) => handleScrollTo(e, 'locations')} className="text-gray-300 hover:text-brand-coral transition-colors">Our Locations</a></li>
-                <li><a href="https://intakeq.com/new/lgmlqn" target="_blank" rel="noopener noreferrer" className="text-gray-300 hover:text-brand-coral transition-colors">Book Online</a></li>
+                <li><button onClick={() => setIsRequestModalOpen(true)} className="text-gray-300 hover:text-brand-coral transition-colors text-left cursor-pointer">Request Appointment</button></li>
               </ul>
             </div>
             
@@ -594,6 +578,16 @@ export default function App() {
 
       {/* 12. Floating Cookie Banner */}
       <CookieBanner />
+
+      {/* 13. Appointment Request Modal Portal */}
+      <AnimatePresence>
+        {isRequestModalOpen && (
+          <AppointmentRequestForm 
+            isOpen={isRequestModalOpen} 
+            onClose={() => setIsRequestModalOpen(false)} 
+          />
+        )}
+      </AnimatePresence>
 
     </div>
   );

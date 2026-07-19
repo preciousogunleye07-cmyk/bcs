@@ -6,10 +6,12 @@ import { googleSignIn, createCalendarEvent, getAccessToken } from '../lib/google
 
 export default function ActionGrid({ 
   preselectedService, 
-  clearPreselectedService 
+  clearPreselectedService,
+  onRequestAppointment
 }: { 
   preselectedService?: string; 
   clearPreselectedService?: () => void;
+  onRequestAppointment?: () => void;
 }) {
   const [activeModal, setActiveModal] = useState<'none' | 'professionals' | 'appointment' | 'referrals'>(
     preselectedService ? 'appointment' : 'none'
@@ -196,13 +198,12 @@ export default function ActionGrid({
       <div className="grid grid-cols-1 gap-8 max-w-xl mx-auto">
         
         {/* Card 2: Schedule an Appointment */}
-        <motion.a 
-          href="https://intakeq.com/new/lgmlqn"
-          target="_blank"
-          rel="noopener noreferrer"
+        <motion.button 
+          type="button"
+          onClick={onRequestAppointment || handleOpenAppointment}
           whileHover={{ y: -6, scale: 1.02 }}
           transition={{ duration: 0.3 }}
-          className="group relative h-[420px] rounded-[3rem] overflow-hidden shadow-soft cursor-pointer border border-white/60 bg-brand-dark block"
+          className="group relative h-[420px] rounded-[3rem] overflow-hidden shadow-soft cursor-pointer border border-white/60 bg-brand-dark block w-full relative text-left"
         >
           <img 
             src="https://images.unsplash.com/photo-1527137341206-1d1b48bae20b?q=80&w=1200&auto=format&fit=crop" 
@@ -232,7 +233,7 @@ export default function ActionGrid({
               <span>Start Booking Wizard</span>
             </div>
           </div>
-        </motion.a>
+        </motion.button>
       </div>
 
       {/* MODAL 1: MEET OUR PROFESSIONALS */}
