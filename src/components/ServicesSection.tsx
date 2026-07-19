@@ -45,6 +45,19 @@ export default function ServicesSection({
       ]
     },
     {
+      id: 'srv-homehealth',
+      title: 'Home Health Services',
+      icon: 'homehealth',
+      description: 'Specialized in-home psychiatric care, daily wellness support, and customized medication monitoring inside your comfortable private residence.',
+      longDescription: 'Our Home Health division bridges the gap between clinical settings and independent living. We provide certified in-home psychiatric nurse visits, mental health check-ins, daily cognitive stimulation exercises, and personalized safety coaching tailored for limited-mobility patients or seniors.',
+      benefits: [
+        'Routine professional in-home welfare checks',
+        'Assisted administration and monitoring of medications',
+        'Tailored therapeutic routines in familiar environments',
+        'Direct care updates shared with families and primary physicians'
+      ]
+    },
+    {
       id: 'srv-more',
       title: 'Integrated Care & Trauma Support',
       icon: 'more',
@@ -79,8 +92,8 @@ export default function ServicesSection({
         </div>
       </div>
 
-      {/* Grid of 3 Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+      {/* Grid of 4 Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
         
         {/* Service Card 1: Depression */}
         <motion.div 
@@ -144,7 +157,38 @@ export default function ServicesSection({
           </button>
         </motion.div>
 
-        {/* Service Card 3: More Services (Elegant dark-styled card) */}
+        {/* Service Card 3: Home Health Services */}
+        <motion.div 
+          initial={{ opacity: 0, y: 30 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.5, delay: 0.15 }}
+          className="bg-white rounded-[2rem] p-6 hover:shadow-float transition-all duration-300 group border border-white/60 flex flex-col justify-between overflow-hidden"
+        >
+          <div>
+            <div className="relative h-48 w-full rounded-2xl overflow-hidden mb-6 shadow-inner bg-neutral-100">
+              <img 
+                src="https://images.unsplash.com/photo-1576765608535-5f04d1e3f289?q=80&w=600&auto=format&fit=crop" 
+                alt="Healthcare professional giving compassionate care in home" 
+                className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-103"
+                referrerPolicy="no-referrer"
+              />
+            </div>
+            <h3 className="text-xl font-extrabold text-brand-dark mb-3">Home Health Services</h3>
+            <p className="text-brand-muted mb-6 text-xs leading-relaxed">
+              Specialized in-home psychiatric care, daily wellness support, and customized medication monitoring inside your comfortable private residence.
+            </p>
+          </div>
+          <button 
+            onClick={() => handleOpenService(servicesData[2])}
+            className="inline-flex items-center text-xs font-extrabold text-brand-dark group-hover:text-brand-green transition-colors w-fit gap-1 cursor-pointer"
+          >
+            CLICK HERE 
+            <span className="transform group-hover:translate-x-1.5 transition-transform font-bold">→</span>
+          </button>
+        </motion.div>
+
+        {/* Service Card 4: More Services (Elegant dark-styled card) */}
         <motion.div 
           initial={{ opacity: 0, y: 30 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -154,7 +198,7 @@ export default function ServicesSection({
             if (onNavigateToWhatWeDo) {
               onNavigateToWhatWeDo();
             } else {
-              handleOpenService(servicesData[2]);
+              handleOpenService(servicesData[3]);
             }
           }}
           className="bg-brand-dark rounded-[2rem] p-6 hover:shadow-float transition-all duration-300 group flex flex-col justify-between relative overflow-hidden text-white cursor-pointer"
@@ -182,7 +226,7 @@ export default function ServicesSection({
               if (onNavigateToWhatWeDo) {
                 onNavigateToWhatWeDo();
               } else {
-                handleOpenService(servicesData[2]);
+                handleOpenService(servicesData[3]);
               }
             }}
             className="inline-flex items-center text-xs font-extrabold text-white group-hover:text-brand-green transition-colors w-fit gap-1 cursor-pointer relative z-10"
