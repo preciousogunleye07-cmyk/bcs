@@ -105,7 +105,6 @@ export default function AppointmentRequestForm({ isOpen, onClose }: AppointmentR
   const handleNewClientSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newClientData.consentUnderstand) {
-      alert('Please check the consent box to proceed.');
       return;
     }
     const num = 'BC-INT-' + Math.floor(Math.random() * 90000 + 10000);
@@ -117,7 +116,6 @@ export default function AppointmentRequestForm({ isOpen, onClose }: AppointmentR
   const handleReturningClientSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!returningClientData.consentUnderstand) {
-      alert('Please check the consent box to proceed.');
       return;
     }
     const num = 'BC-RET-' + Math.floor(Math.random() * 90000 + 10000);
@@ -248,24 +246,24 @@ export default function AppointmentRequestForm({ isOpen, onClose }: AppointmentR
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-brand-dark/70 backdrop-blur-md flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-brand-dark/70 backdrop-blur-md flex items-center justify-center p-2 sm:p-4">
       <motion.div 
         initial={{ opacity: 0, scale: 0.95, y: 30 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.95, y: 30 }}
-        className="bg-white rounded-[2.5rem] max-w-4xl w-full overflow-hidden shadow-float relative max-h-[90vh] flex flex-col border border-neutral-100"
+        className="bg-white rounded-2xl sm:rounded-[2.5rem] max-w-4xl w-full overflow-hidden shadow-float relative max-h-[96vh] sm:max-h-[90vh] flex flex-col border border-neutral-100"
       >
         {/* Close Button */}
         <button 
           onClick={onClose}
-          className="absolute top-5 right-5 p-2 rounded-full bg-neutral-100 hover:bg-neutral-200 text-brand-dark transition-all z-10 cursor-pointer"
+          className="absolute top-3 right-3 sm:top-5 sm:right-5 p-1.5 sm:p-2 rounded-full bg-neutral-100 hover:bg-neutral-200 text-brand-dark transition-all z-10 cursor-pointer"
           aria-label="Close request form"
         >
           <X className="w-5 h-5" />
         </button>
 
         {/* Modal Header */}
-        <div className="bg-brand-dark text-white p-6 sm:p-8 shrink-0 relative overflow-hidden">
+        <div className="bg-brand-dark text-white p-4 sm:p-8 shrink-0 relative overflow-hidden">
           {/* Subtle patterns */}
           <div className="absolute top-0 right-0 w-64 h-64 rounded-full bg-brand-blue/10 blur-3xl pointer-events-none"></div>
           <div className="absolute bottom-0 left-0 w-64 h-64 rounded-full bg-brand-green/5 blur-2xl pointer-events-none"></div>
@@ -273,18 +271,18 @@ export default function AppointmentRequestForm({ isOpen, onClose }: AppointmentR
           <span className="text-[10px] font-bold uppercase tracking-widest text-brand-coral block mb-1">
             Care Intake Office
           </span>
-          <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight">Appointment Request Portal</h2>
-          <p className="text-gray-400 text-xs sm:text-sm mt-1 max-w-xl">
+          <h2 className="text-xl sm:text-3xl font-extrabold tracking-tight">Appointment Request Portal</h2>
+          <p className="text-gray-400 text-xs sm:text-sm mt-1 max-w-xl hidden sm:block">
             Please fill out our official clinic form. Our administrative staff will review your request and reach out to confirm details.
           </p>
 
           {/* Toggle Tabs */}
           {!isSubmitted && (
-            <div className="flex bg-white/10 p-1.5 rounded-full mt-6 max-w-md border border-white/5">
+            <div className="flex bg-white/10 p-1 rounded-full mt-3 sm:mt-6 max-w-md border border-white/5">
               <button
                 type="button"
                 onClick={() => setActiveTab('new-client')}
-                className={`flex-1 py-2.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
+                className={`flex-1 py-1.5 sm:py-2.5 rounded-full text-[11px] sm:text-xs font-bold transition-all cursor-pointer ${
                   activeTab === 'new-client' 
                     ? 'bg-white text-brand-dark shadow-sm' 
                     : 'text-white/80 hover:text-white'
@@ -295,7 +293,7 @@ export default function AppointmentRequestForm({ isOpen, onClose }: AppointmentR
               <button
                 type="button"
                 onClick={() => setActiveTab('returning-client')}
-                className={`flex-1 py-2.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
+                className={`flex-1 py-1.5 sm:py-2.5 rounded-full text-[11px] sm:text-xs font-bold transition-all cursor-pointer ${
                   activeTab === 'returning-client' 
                     ? 'bg-white text-brand-dark shadow-sm' 
                     : 'text-white/80 hover:text-white'
@@ -308,7 +306,7 @@ export default function AppointmentRequestForm({ isOpen, onClose }: AppointmentR
         </div>
 
         {/* Modal Scrollable Body */}
-        <div className="p-6 sm:p-8 overflow-y-auto flex-grow bg-brand-bg/50">
+        <div className="p-3 sm:p-8 overflow-y-auto flex-grow bg-brand-bg/50">
           <AnimatePresence mode="wait">
             {isSubmitted ? (
               <motion.div 
@@ -396,7 +394,7 @@ export default function AppointmentRequestForm({ isOpen, onClose }: AppointmentR
                   <form onSubmit={handleNewClientSubmit} className="space-y-8">
                     
                     {/* SECTION 1: CLIENT INFORMATION */}
-                    <div className="bg-white rounded-3xl p-6 sm:p-8 border border-neutral-200/50 shadow-sm space-y-6 text-left">
+                    <div className="bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-8 border border-neutral-200/50 shadow-sm space-y-6 text-left">
                       <h3 className="text-lg font-bold text-brand-dark flex items-center gap-2 border-b border-neutral-100 pb-3">
                         <User className="w-5 h-5 text-brand-coral" />
                         1. Client Information
@@ -518,7 +516,7 @@ export default function AppointmentRequestForm({ isOpen, onClose }: AppointmentR
                     </div>
 
                     {/* SECTION 2: REASON FOR SEEKING SERVICES */}
-                    <div className="bg-white rounded-3xl p-6 sm:p-8 border border-neutral-200/50 shadow-sm space-y-6 text-left">
+                    <div className="bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-8 border border-neutral-200/50 shadow-sm space-y-6 text-left">
                       <h3 className="text-lg font-bold text-brand-dark flex items-center gap-2 border-b border-neutral-100 pb-3">
                         <Heart className="w-5 h-5 text-brand-coral" />
                         2. Reason for Seeking Services
@@ -579,7 +577,7 @@ export default function AppointmentRequestForm({ isOpen, onClose }: AppointmentR
                     </div>
 
                     {/* SECTION 3: PAYMENT INFORMATION */}
-                    <div className="bg-white rounded-3xl p-6 sm:p-8 border border-neutral-200/50 shadow-sm space-y-6 text-left">
+                    <div className="bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-8 border border-neutral-200/50 shadow-sm space-y-6 text-left">
                       <h3 className="text-lg font-bold text-brand-dark flex items-center gap-2 border-b border-neutral-100 pb-3">
                         <CreditCard className="w-5 h-5 text-brand-coral" />
                         3. Payment Information
@@ -708,7 +706,7 @@ export default function AppointmentRequestForm({ isOpen, onClose }: AppointmentR
                     </div>
 
                     {/* SECTION 4: PREFERRED APPOINTMENT SETTINGS */}
-                    <div className="bg-white rounded-3xl p-6 sm:p-8 border border-neutral-200/50 shadow-sm space-y-6 text-left">
+                    <div className="bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-8 border border-neutral-200/50 shadow-sm space-y-6 text-left">
                       <h3 className="text-lg font-bold text-brand-dark flex items-center gap-2 border-b border-neutral-100 pb-3">
                         <MapPin className="w-5 h-5 text-brand-coral" />
                         4. Preferred Appointment
@@ -783,7 +781,7 @@ export default function AppointmentRequestForm({ isOpen, onClose }: AppointmentR
                     </div>
 
                     {/* SECTION 5: CONSENT & SUBMIT */}
-                    <div className="bg-white rounded-3xl p-6 sm:p-8 border border-neutral-200/50 shadow-sm space-y-6 text-left">
+                    <div className="bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-8 border border-neutral-200/50 shadow-sm space-y-6 text-left">
                       <h3 className="text-lg font-bold text-brand-dark flex items-center gap-2 border-b border-neutral-100 pb-3">
                         <ShieldCheck className="w-5 h-5 text-brand-coral" />
                         5. Consent &amp; Submit
@@ -818,7 +816,7 @@ export default function AppointmentRequestForm({ isOpen, onClose }: AppointmentR
                   <form onSubmit={handleReturningClientSubmit} className="space-y-8">
                     
                     {/* SECTION 1: CLIENT INFORMATION */}
-                    <div className="bg-white rounded-3xl p-6 sm:p-8 border border-neutral-200/50 shadow-sm space-y-6 text-left">
+                    <div className="bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-8 border border-neutral-200/50 shadow-sm space-y-6 text-left">
                       <h3 className="text-lg font-bold text-brand-dark flex items-center gap-2 border-b border-neutral-100 pb-3">
                         <User className="w-5 h-5 text-brand-coral" />
                         1. Returning Client Information
@@ -875,7 +873,7 @@ export default function AppointmentRequestForm({ isOpen, onClose }: AppointmentR
                     </div>
 
                     {/* SECTION 2: APPOINTMENT INFORMATION */}
-                    <div className="bg-white rounded-3xl p-6 sm:p-8 border border-neutral-200/50 shadow-sm space-y-6 text-left">
+                    <div className="bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-8 border border-neutral-200/50 shadow-sm space-y-6 text-left">
                       <h3 className="text-lg font-bold text-brand-dark flex items-center gap-2 border-b border-neutral-100 pb-3">
                         <Calendar className="w-5 h-5 text-brand-coral" />
                         2. Appointment History
@@ -908,7 +906,7 @@ export default function AppointmentRequestForm({ isOpen, onClose }: AppointmentR
                     </div>
 
                     {/* SECTION 3: REASON FOR FOLLOW-UP */}
-                    <div className="bg-white rounded-3xl p-6 sm:p-8 border border-neutral-200/50 shadow-sm space-y-6 text-left">
+                    <div className="bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-8 border border-neutral-200/50 shadow-sm space-y-6 text-left">
                       <h3 className="text-lg font-bold text-brand-dark flex items-center gap-2 border-b border-neutral-100 pb-3">
                         <FileText className="w-5 h-5 text-brand-coral" />
                         3. Reason for Follow-Up
@@ -919,7 +917,7 @@ export default function AppointmentRequestForm({ isOpen, onClose }: AppointmentR
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                           {[
                             'Individual Therapy', 'Family Therapy', 'Medication Management', 
-                            'PRP Services', 'Reassessment', 'Treatment Plan Review', 'Care Coordination'
+                            'Reassessment', 'Treatment Plan Review', 'Care Coordination'
                           ].map(reason => (
                             <button
                               type="button"
@@ -953,7 +951,7 @@ export default function AppointmentRequestForm({ isOpen, onClose }: AppointmentR
                     </div>
 
                     {/* SECTION 4: PAYMENT INFORMATION */}
-                    <div className="bg-white rounded-3xl p-6 sm:p-8 border border-neutral-200/50 shadow-sm space-y-6 text-left">
+                    <div className="bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-8 border border-neutral-200/50 shadow-sm space-y-6 text-left">
                       <h3 className="text-lg font-bold text-brand-dark flex items-center gap-2 border-b border-neutral-100 pb-3">
                         <CreditCard className="w-5 h-5 text-brand-coral" />
                         4. Payment Method Update
@@ -1041,7 +1039,7 @@ export default function AppointmentRequestForm({ isOpen, onClose }: AppointmentR
                     </div>
 
                     {/* SECTION 5: APPOINTMENT PREFERENCE */}
-                    <div className="bg-white rounded-3xl p-6 sm:p-8 border border-neutral-200/50 shadow-sm space-y-6 text-left">
+                    <div className="bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-8 border border-neutral-200/50 shadow-sm space-y-6 text-left">
                       <h3 className="text-lg font-bold text-brand-dark flex items-center gap-2 border-b border-neutral-100 pb-3">
                         <MapPin className="w-5 h-5 text-brand-coral" />
                         5. Appointment Preferences
@@ -1116,7 +1114,7 @@ export default function AppointmentRequestForm({ isOpen, onClose }: AppointmentR
                     </div>
 
                     {/* SECTION 6: CHANGES SINCE LAST APPOINTMENT */}
-                    <div className="bg-white rounded-3xl p-6 sm:p-8 border border-neutral-200/50 shadow-sm space-y-6 text-left">
+                    <div className="bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-8 border border-neutral-200/50 shadow-sm space-y-6 text-left">
                       <h3 className="text-lg font-bold text-brand-dark flex items-center gap-2 border-b border-neutral-100 pb-3">
                         <AlertCircle className="w-5 h-5 text-brand-coral" />
                         6. Client Updates &amp; Clinic History
@@ -1168,7 +1166,7 @@ export default function AppointmentRequestForm({ isOpen, onClose }: AppointmentR
                     </div>
 
                     {/* SECTION 7: REMINDER PREFERENCE */}
-                    <div className="bg-white rounded-3xl p-6 sm:p-8 border border-neutral-200/50 shadow-sm space-y-6 text-left">
+                    <div className="bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-8 border border-neutral-200/50 shadow-sm space-y-6 text-left">
                       <h3 className="text-lg font-bold text-brand-dark flex items-center gap-2 border-b border-neutral-100 pb-3">
                         <Clock className="w-5 h-5 text-brand-coral" />
                         7. Contact &amp; Reminder Preference
@@ -1196,7 +1194,7 @@ export default function AppointmentRequestForm({ isOpen, onClose }: AppointmentR
                     </div>
 
                     {/* SECTION 8: CONFIRMATION & CONSENT */}
-                    <div className="bg-white rounded-3xl p-6 sm:p-8 border border-neutral-200/50 shadow-sm space-y-6 text-left">
+                    <div className="bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-8 border border-neutral-200/50 shadow-sm space-y-6 text-left">
                       <h3 className="text-lg font-bold text-brand-dark flex items-center gap-2 border-b border-neutral-100 pb-3">
                         <ShieldCheck className="w-5 h-5 text-brand-coral" />
                         8. Consent &amp; Submit
