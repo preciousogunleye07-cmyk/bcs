@@ -19,6 +19,8 @@ export default function AppointmentRequestForm({ isOpen, onClose, preselectedSer
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [formTypeSubmitted, setFormTypeSubmitted] = useState<FormTab>('new-client');
   const [requestNumber, setRequestNumber] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submissionError, setSubmissionError] = useState<string | null>(null);
 
   // 1. New Client Form State
   const [newClientData, setNewClientData] = useState({
@@ -139,26 +141,126 @@ export default function AppointmentRequestForm({ isOpen, onClose, preselectedSer
 
   // Form step indicators (if we want step wizard, but since the form is a standard paper structure, we can segment it into logical scrollable sections with tabs, giving a clean and high-fidelity form feel)
   
-  const handleNewClientSubmit = (e: React.FormEvent) => {
+  const handleNewClientSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newClientData.consentUnderstand) {
       return;
     }
+    setIsSubmitting(true);
+    setSubmissionError(null);
     const num = 'BC-INT-' + Math.floor(Math.random() * 90000 + 10000);
-    setRequestNumber(num);
-    setFormTypeSubmitted('new-client');
-    setIsSubmitted(true);
+
+    const payload = {
+      "Submission Type": "New Client Intake",
+      "Ticket Number": num,
+      "Full Name": newClientData.fullName,
+      "Date of Birth": newClientData.dob,
+      "Age": newClientData.age,
+      "Gender": newClientData.gender,
+      "Parent or Guardian Name": newClientData.parentGuardian,
+      "Relationship to Client": newClientData.relationshipToClient,
+      "Phone Number": newClientData.phone,
+      "Email Address": newClientData.email,
+      "Home Address": newClientData.homeAddress,
+      "Reasons for Seeking Services": newClientData.reasons.join(', '),
+      "Other Reason Details": newClientData.otherReason,
+      "Specific Concerns or Background": newClientData.concernsDescription,
+      "Payment Method": newClientData.paymentMethod,
+      "Insurance Company": newClientData.insuranceCompany,
+      "Member ID / Subscriber ID": newClientData.memberId,
+      "Group Number": newClientData.groupNumber,
+      "Policy Holder Name": newClientData.policyHolder,
+      "Policy Holder DOB": newClientData.policyHolderDob,
+      "Relationship to Policy Holder": newClientData.relationshipToPolicyHolder,
+      "Preferred Location": newClientData.location,
+      "Preferred Days": newClientData.preferredDays.join(', '),
+      "Preferred Time Window": newClientData.preferredTimes.join(', '),
+      "Target Booking Date": newClientData.preferredDate
+    };
+
+    try {
+      const response = await fetch("https://formspree.io/f/mzdnrlwp", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Accept": "application/json"
+        },
+        body: JSON.stringify(payload)
+      });
+
+      if (response.ok) {
+        setRequestNumber(num);
+        setFormTypeSubmitted('new-client');
+        setIsSubmitted(true);
+      } else {
+        const errorData = await response.json();
+        setSubmissionError(errorData.error || "An error occurred while submitting. Please try again.");
+      }
+    } catch (err) {
+      setSubmissionError("Network error. Please check your internet connection and try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-  const handleReturningClientSubmit = (e: React.FormEvent) => {
+  const handleReturningClientSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!returningClientData.consentUnderstand) {
       return;
     }
+    setIsSubmitting(true);
+    setSubmissionError(null);
     const num = 'BC-RET-' + Math.floor(Math.random() * 90000 + 10000);
-    setRequestNumber(num);
-    setFormTypeSubmitted('returning-client');
-    setIsSubmitted(true);
+
+    const payload = {
+      "Submission Type": "Returning Client Request",
+      "Ticket Number": num,
+      "Full Name": returningClientData.fullName,
+      "Date of Birth": returningClientData.dob,
+      "Phone Number": returningClientData.phone,
+      "Email Address": returningClientData.email,
+      "Current Provider Name": returningClientData.providerName,
+      "Last Appointment Date": returningClientData.lastAppointmentDate,
+      "Payment Changes": returningClientData.paymentChanges,
+      "Insurance Company": returningClientData.insuranceCompany,
+      "Member ID / Subscriber ID": returningClientData.memberId,
+      "Group Number": returningClientData.groupNumber,
+      "Policy Holder Name": returningClientData.policyHolder,
+      "Reasons for Follow-Up": returningClientData.reasons.join(', '),
+      "Other Reason Details": returningClientData.otherReason,
+      "Preferred Location": returningClientData.location,
+      "Preferred Days": returningClientData.preferredDays.join(', '),
+      "Preferred Time Window": returningClientData.preferredTimes.join(', '),
+      "Target Booking Date": returningClientData.preferredDate,
+      "Vital Status Updates": returningClientData.changes.join(', '),
+      "Updates Explanation": returningClientData.changesExplanation,
+      "Current Concerns or Discussion Points": returningClientData.currentConcerns,
+      "Reminder Preference": returningClientData.reminderMethod
+    };
+
+    try {
+      const response = await fetch("https://formspree.io/f/mzdnrlwp", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Accept": "application/json"
+        },
+        body: JSON.stringify(payload)
+      });
+
+      if (response.ok) {
+        setRequestNumber(num);
+        setFormTypeSubmitted('returning-client');
+        setIsSubmitted(true);
+      } else {
+        const errorData = await response.json();
+        setSubmissionError(errorData.error || "An error occurred while submitting. Please try again.");
+      }
+    } catch (err) {
+      setSubmissionError("Network error. Please check your internet connection and try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const toggleReasonNewClient = (reason: string) => {
@@ -227,6 +329,8 @@ export default function AppointmentRequestForm({ isOpen, onClose, preselectedSer
 
   const resetForms = () => {
     setIsSubmitted(false);
+    setIsSubmitting(false);
+    setSubmissionError(null);
     setNewClientDobParts({ month: '', day: '', year: '' });
     setPolicyHolderDobParts({ month: '', day: '', year: '' });
     setReturningClientDobParts({ month: '', day: '', year: '' });
@@ -1059,12 +1163,29 @@ export default function AppointmentRequestForm({ isOpen, onClose, preselectedSer
                         </p>
                       </label>
 
+                      {submissionError && (
+                        <div className="p-4 bg-red-50 border border-red-200 rounded-2xl text-red-700 text-xs font-semibold leading-relaxed">
+                          {submissionError}
+                        </div>
+                      )}
+
                       <div className="pt-4 flex justify-end">
                         <button
                           type="submit"
-                          className="bg-gradient-to-r from-brand-green to-brand-blue hover:from-brand-greenHover hover:to-brand-blueHover text-white font-bold py-4 px-10 rounded-full text-xs shadow-md shadow-brand-blue/10 hover:shadow-brand-blue/20 transition-all flex items-center gap-2 cursor-pointer"
+                          disabled={isSubmitting}
+                          className={`bg-gradient-to-r from-brand-green to-brand-blue hover:from-brand-greenHover hover:to-brand-blueHover text-white font-bold py-4 px-10 rounded-full text-xs shadow-md shadow-brand-blue/10 hover:shadow-brand-blue/20 transition-all flex items-center gap-2 cursor-pointer ${isSubmitting ? 'opacity-70 cursor-not-allowed' : ''}`}
                         >
-                          Submit New Intake Request <ArrowRight className="w-4 h-4" />
+                          {isSubmitting ? (
+                            <>
+                              <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                              </svg>
+                              Submitting Request...
+                            </>
+                          ) : (
+                            <>Submit New Intake Request <ArrowRight className="w-4 h-4" /></>
+                          )}
                         </button>
                       </div>
                     </div>
@@ -1535,12 +1656,29 @@ export default function AppointmentRequestForm({ isOpen, onClose, preselectedSer
                         </p>
                       </label>
 
+                      {submissionError && (
+                        <div className="p-4 bg-red-50 border border-red-200 rounded-2xl text-red-700 text-xs font-semibold leading-relaxed">
+                          {submissionError}
+                        </div>
+                      )}
+
                       <div className="pt-4 flex justify-end">
                         <button
                           type="submit"
-                          className="bg-gradient-to-r from-brand-green to-brand-blue hover:from-brand-greenHover hover:to-brand-blueHover text-white font-bold py-4 px-10 rounded-full text-xs shadow-md shadow-brand-blue/10 hover:shadow-brand-blue/20 transition-all flex items-center gap-2 cursor-pointer"
+                          disabled={isSubmitting}
+                          className={`bg-gradient-to-r from-brand-green to-brand-blue hover:from-brand-greenHover hover:to-brand-blueHover text-white font-bold py-4 px-10 rounded-full text-xs shadow-md shadow-brand-blue/10 hover:shadow-brand-blue/20 transition-all flex items-center gap-2 cursor-pointer ${isSubmitting ? 'opacity-70 cursor-not-allowed' : ''}`}
                         >
-                          Submit Returning Request <ArrowRight className="w-4 h-4" />
+                          {isSubmitting ? (
+                            <>
+                              <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                              </svg>
+                              Submitting Request...
+                            </>
+                          ) : (
+                            <>Submit Returning Request <ArrowRight className="w-4 h-4" /></>
+                          )}
                         </button>
                       </div>
                     </div>
