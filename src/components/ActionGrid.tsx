@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Users, Calendar, ArrowRight, X, Sparkles, Check, CheckCircle2, User, Phone, Mail, Award, Clock, RefreshCw } from 'lucide-react';
+import { Users, Calendar, ArrowRight, X, Sparkles, Check, CheckCircle2, User, Phone, Mail, Award, Clock } from 'lucide-react';
 import { Expert, AppointmentBooking, ReferralSubmission } from '../types';
-import { googleSignIn, createCalendarEvent, getAccessToken } from '../lib/googleCalendar';
 
 export default function ActionGrid({ 
   preselectedService, 
@@ -31,11 +30,6 @@ export default function ActionGrid({
     notes: ''
   });
   const [bookingSuccessData, setBookingSuccessData] = useState<{ id: string } | null>(null);
-
-  // Google Calendar integration state
-  const [syncingCalendar, setSyncingCalendar] = useState(false);
-  const [calendarSyncSuccess, setCalendarSyncSuccess] = useState(false);
-  const [calendarSyncError, setCalendarSyncError] = useState<string | null>(null);
 
   // Referral Form state
   const [referralData, setReferralData] = useState<ReferralSubmission>({
@@ -91,9 +85,6 @@ export default function ActionGrid({
   const handleOpenAppointment = () => {
     setBookingStep(1);
     setBookingSuccessData(null);
-    setCalendarSyncSuccess(false);
-    setCalendarSyncError(null);
-    setSyncingCalendar(false);
     setBookingData({
       firstName: '',
       lastName: '',
@@ -106,6 +97,32 @@ export default function ActionGrid({
       notes: ''
     });
     setActiveModal('appointment');
+  };
+
+  const handleAutoFillBooking = () => {
+    const todayStr = new Date().toISOString().split('T')[0];
+    setBookingData({
+      firstName: 'Jordan',
+      lastName: 'Morgan',
+      email: 'jordan.morgan.test@example.com',
+      phone: '(410) 555-0198',
+      expertId: 'staff-vance',
+      serviceId: preselectedService || 'Psychiatric Evaluation & Medication Management',
+      date: todayStr,
+      timeSlot: '10:00 AM - 11:00 AM',
+      notes: 'Test consultation request for routine care assessment.'
+    });
+  };
+
+  const handleAutoFillReferral = () => {
+    setReferralData({
+      referrerName: 'Dr. Emily Carter, MD',
+      referrerContact: 'emily.carter@columbiamedical.org',
+      patientName: 'Alex Rivera',
+      patientContact: '(410) 555-0144',
+      serviceNeeded: 'Psychiatric Evaluation & Medication Management',
+      notes: 'Referred for comprehensive outpatient mental health evaluation and ongoing medication management.'
+    });
   };
 
   const handleOpenReferrals = () => {
@@ -127,45 +144,6 @@ export default function ActionGrid({
     const randomId = 'BC-' + Math.floor(Math.random() * 900000 + 100000);
     setBookingSuccessData({ id: randomId });
     setBookingStep(4);
-  };
-
-  const handleSyncToCalendar = async () => {
-    const confirmed = window.confirm("Would you like to sync this BalanceCare Consultation to your Google Calendar?");
-    if (!confirmed) return;
-
-    setSyncingCalendar(true);
-    setCalendarSyncError(null);
-
-    try {
-      let token = getAccessToken();
-      if (!token) {
-        const result = await googleSignIn();
-        if (result) {
-          token = result.accessToken;
-        }
-      }
-
-      if (!token) {
-        throw new Error("Could not authenticate with Google Calendar. Please make sure to sign in and grant the requested calendar permissions.");
-      }
-
-      const expertName = selectedExpertObj ? selectedExpertObj.name : 'Intake Specialist';
-      const eventDetails = {
-        summary: `BalanceCare Health: ${bookingData.serviceId}`,
-        description: `Your wellness consultation with BalanceCare specialist: ${expertName}. \nProgram: ${bookingData.serviceId}\nNotes: ${bookingData.notes || 'No notes provided.'}\nAssigned Care Advisor: ${expertName}\nHelpline: 410-977-2847`,
-        date: bookingData.date,
-        timeSlot: bookingData.timeSlot,
-        expertName
-      };
-
-      await createCalendarEvent(token, eventDetails);
-      setCalendarSyncSuccess(true);
-    } catch (error: any) {
-      console.error("Google Calendar Sync Error:", error);
-      setCalendarSyncError(error.message || "Failed to sync to Google Calendar.");
-    } finally {
-      setSyncingCalendar(false);
-    }
   };
 
   const handleReferralSubmit = (e: React.FormEvent) => {
@@ -333,10 +311,25 @@ export default function ActionGrid({
                 >
                   <X className="w-5 h-5" />
                 </button>
-                <span className="text-[10px] font-bold uppercase tracking-widest text-brand-coral block mb-1">
-                  Secure Consultation System
-                </span>
-                <h3 className="text-xl md:text-2xl font-extrabold">Schedule an Appointment</h3>
+                <div className="flex items-center justify-between gap-2 pr-10">
+                  <div>
+                    <span className="text-[10px] font-bold uppercase tracking-widest text-brand-coral block mb-1">
+                      Secure Consultation System
+                    </span>
+                    <h3 className="text-xl md:text-2xl font-extrabold">Schedule an Appointment</h3>
+                  </div>
+                  {bookingStep < 4 && (
+                    <button
+                      type="button"
+                      onClick={handleAutoFillBooking}
+                      className="px-3 py-1.5 bg-white/10 hover:bg-white/20 text-white text-[11px] font-bold rounded-xl border border-white/20 transition-all flex items-center gap-1 cursor-pointer shrink-0"
+                      title="Fill with test sample data"
+                    >
+                      <Sparkles className="w-3 h-3 text-brand-coral" />
+                      <span>⚡ Auto-Fill</span>
+                    </button>
+                  )}
+                </div>
                 
                 {bookingStep < 4 && (
                   <div className="flex items-center gap-1.5 mt-4">
@@ -395,8 +388,28 @@ export default function ActionGrid({
                 {/* STEP 2: DATE & TIME */}
                 {bookingStep === 2 && (
                   <motion.div initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} className="space-y-4 flex-grow">
-                    <h4 className="font-bold text-brand-dark text-sm mb-1">Pick a convenient target day &amp; time slot</h4>
+                    <div className="flex items-center justify-between">
+                      <h4 className="font-bold text-brand-dark text-sm mb-1">Pick a convenient target day &amp; time slot</h4>
+                    </div>
                     
+                    {/* Cal.com Direct Booking Link */}
+                    <div className="p-3 bg-brand-blue/5 border border-brand-blue/20 rounded-xl flex items-center justify-between gap-2">
+                      <div className="text-left">
+                        <span className="text-xs font-bold text-brand-dark block">Or Book Live via Cal.com</span>
+                        <span className="text-[10px] text-brand-muted">Open live calendar view in popup</span>
+                      </div>
+                      <button
+                        type="button"
+                        data-cal-link="balancecare-health-services-u53h5o/appointment-request-portal"
+                        data-cal-namespace="appointment-request-portal"
+                        data-cal-config='{"layout":"month_view","useSlotsViewOnSmallScreen":"true"}'
+                        className="px-3 py-1.5 bg-brand-dark hover:bg-black text-white text-[11px] font-bold rounded-lg shadow-sm transition-all flex items-center gap-1.5 cursor-pointer"
+                      >
+                        <Sparkles className="w-3 h-3 text-brand-coral" />
+                        <span>Open Cal.com</span>
+                      </button>
+                    </div>
+
                     <div className="space-y-4">
                       <div>
                         <label className="block text-[10px] font-bold uppercase tracking-wider text-brand-dark mb-1">Target Consultation Date</label>
@@ -540,73 +553,6 @@ export default function ActionGrid({
                         <span className="text-brand-muted">Target Schedule:</span>
                         <span className="font-bold text-brand-dark">{bookingData.date} ({bookingData.timeSlot.split(' ')[0]})</span>
                       </div>
-                    </div>
-
-                    {/* Google Calendar Sync Card */}
-                    <div className="w-full max-w-xs bg-brand-bg rounded-2xl border border-neutral-200 p-5 text-left text-xs space-y-3.5">
-                      <div className="flex items-center gap-2">
-                        <Calendar className="w-4 h-4 text-brand-coral" />
-                        <span className="font-bold text-brand-dark">Google Calendar Sync</span>
-                      </div>
-                      
-                      <p className="text-[11px] text-brand-muted leading-relaxed">
-                        Add this appointment to your personal calendar to receive automatic reminders and sync across your devices.
-                      </p>
-
-                      {calendarSyncSuccess ? (
-                        <div className="flex items-center gap-2 text-emerald-600 bg-emerald-50 border border-emerald-100 p-2.5 rounded-xl">
-                          <Check className="w-4 h-4 shrink-0" />
-                          <span className="font-bold text-[11px]">Synced to Google Calendar!</span>
-                        </div>
-                      ) : (
-                        <div>
-                          <button
-                            type="button"
-                            onClick={handleSyncToCalendar}
-                            disabled={syncingCalendar}
-                            className={`w-full py-2.5 px-4 rounded-xl font-bold transition-all flex items-center justify-center gap-2 text-[11px] cursor-pointer ${
-                              syncingCalendar
-                                ? 'bg-neutral-100 text-neutral-400 border border-neutral-200'
-                                : 'bg-white border border-neutral-200 text-brand-dark hover:bg-neutral-50 shadow-sm hover:border-neutral-300'
-                            }`}
-                          >
-                            {syncingCalendar ? (
-                              <>
-                                <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                                <span>Syncing...</span>
-                              </>
-                            ) : (
-                              <>
-                                <svg className="w-3.5 h-3.5" viewBox="0 0 24 24">
-                                  <path
-                                    fill="#4285F4"
-                                    d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-                                  />
-                                  <path
-                                    fill="#34A853"
-                                    d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-                                  />
-                                  <path
-                                    fill="#FBBC05"
-                                    d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22c-.62-.62-1.05-1.37-1.38-2.15z"
-                                  />
-                                  <path
-                                    fill="#EA4335"
-                                    d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
-                                  />
-                                </svg>
-                                <span>Sync to Google Calendar</span>
-                              </>
-                            )}
-                          </button>
-
-                          {calendarSyncError && (
-                            <p className="mt-2 text-[10px] text-rose-500 font-semibold leading-relaxed">
-                              ⚠️ {calendarSyncError}
-                            </p>
-                          )}
-                        </div>
-                      )}
                     </div>
                   </motion.div>
                 )}

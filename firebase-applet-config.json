@@ -5,5 +5,7 @@
   "authDomain": "vmemo-491614.firebaseapp.com",
   "storageBucket": "vmemo-491614.firebasestorage.app",
   "messagingSenderId": "95484757908",
-  "measurementId": ""
+  "measurementId": "",
+  "oAuthClientId": "95484757908-biljr2jsida9fjh3f1ntl1njqbooe8l7.apps.googleusercontent.com",
+  "recaptchaSiteKey": ""
 }

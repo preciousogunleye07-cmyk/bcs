@@ -44,7 +44,7 @@ export default function HeroSection({ onFindCareClick }: { onFindCareClick: () =
         <div className="absolute bottom-12 -right-12 w-96 h-96 rounded-full bg-brand-green/10 blur-3xl pointer-events-none"></div>
         
 
-        <div className="relative z-10 w-full px-6 md:px-16 lg:px-24 grid grid-cols-1 md:grid-cols-12 items-center gap-8 md:gap-10 lg:gap-12">
+        <div className="relative z-10 w-full px-6 md:px-10 lg:px-12 grid grid-cols-1 md:grid-cols-12 items-center gap-8 md:gap-10 lg:gap-12">
           <div className="md:col-span-7 lg:col-span-7 max-w-2xl">
             
             <motion.h1 
