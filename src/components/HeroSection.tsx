@@ -77,13 +77,14 @@ export default function HeroSection({ onFindCareClick }: { onFindCareClick: () =
               transition={{ duration: 0.6, delay: 0.3 }}
               className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4"
             >
-              <button 
-                type="button"
-                onClick={onFindCareClick}
-                className="bg-gradient-to-r from-brand-green to-brand-blue hover:from-brand-greenHover hover:to-brand-blueHover text-white font-bold py-4 px-10 rounded-full transition-all duration-300 transform hover:-translate-y-0.5 shadow-lg shadow-brand-blue/20 text-base cursor-pointer text-center inline-block"
+              <a 
+                href="/request-appointment"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="bg-gradient-to-r from-brand-green to-brand-blue hover:from-brand-greenHover hover:to-brand-blueHover text-white font-bold py-4 px-10 rounded-full transition-all duration-300 transform hover:-translate-y-0.5 shadow-lg shadow-brand-blue/20 text-base cursor-pointer text-center inline-flex items-center justify-center gap-2"
               >
-                FIND CARE
-              </button>
+                <span>FIND CARE</span>
+              </a>
               
               <a 
                 href="#about" 

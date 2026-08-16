@@ -16,8 +16,26 @@ export default function App() {
   const [scrolled, setScrolled] = useState(false);
   const [showScrollTop, setShowScrollTop] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [currentPath, setCurrentPath] = useState<string>(() => {
+    if (typeof window !== 'undefined') {
+      return window.location.pathname;
+    }
+    return '/';
+  });
   const [currentView, setCurrentView] = useState<'home' | 'what-we-do'>('home');
   const [isRequestModalOpen, setIsRequestModalOpen] = useState(false);
+
+  // Synchronize browser history / popstate
+  useEffect(() => {
+    const handlePopState = () => {
+      setCurrentPath(window.location.pathname);
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
+  // Check if current route is /request-appointment or /request-appointment/
+  const isRequestAppointmentPage = currentPath.toLowerCase().startsWith('/request-appointment');
 
   const handleShareClick = () => {
     navigator.clipboard.writeText(window.location.href);
@@ -91,6 +109,20 @@ export default function App() {
     setPreselectedService(serviceName);
     setIsRequestModalOpen(true);
   };
+
+  // If visiting /request-appointment URL directly, render full page portal
+  if (isRequestAppointmentPage) {
+    return (
+      <div className="min-h-screen bg-brand-bg font-sans selection:bg-brand-coral/30 text-brand-dark relative" id="app-root">
+        <AppointmentRequestForm 
+          isOpen={true} 
+          isFullPage={true}
+          preselectedService={preselectedService}
+        />
+        <CookieBanner />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-brand-bg font-sans selection:bg-brand-coral/30 text-brand-dark relative" id="app-root">
@@ -198,13 +230,16 @@ export default function App() {
 
             {/* Navigation CTA */}
             <div className="hidden md:block">
-              <button 
-                onClick={() => setIsRequestModalOpen(true)}
+              <a 
+                href="/request-appointment"
+                target="_blank"
+                rel="noopener noreferrer"
                 className="inline-flex items-center gap-1.5 bg-gradient-to-r from-brand-green to-brand-blue hover:from-brand-greenHover hover:to-brand-blueHover text-white px-6 py-3 rounded-full text-sm font-bold shadow-md shadow-brand-blue/15 hover:shadow-brand-blue/30 transition-all cursor-pointer"
               >
                 <MessageSquare className="w-4 h-4" />
                 <span>Request Appointment</span>
-              </button>
+                <ExternalLink className="w-3.5 h-3.5 opacity-80" />
+              </a>
             </div>
 
             {/* Mobile Menu Button */}
@@ -263,12 +298,16 @@ export default function App() {
               >
                 Our Locations
               </button>
-              <button 
-                onClick={() => { setMobileMenuOpen(false); setIsRequestModalOpen(true); }}
-                className="block w-full text-center py-4 bg-gradient-to-r from-brand-green to-brand-blue hover:from-brand-greenHover hover:to-brand-blueHover text-white font-bold rounded-2xl text-base mt-4 shadow-sm cursor-pointer"
+              <a 
+                href="/request-appointment"
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={() => setMobileMenuOpen(false)}
+                className="block w-full text-center py-4 bg-gradient-to-r from-brand-green to-brand-blue hover:from-brand-greenHover hover:to-brand-blueHover text-white font-bold rounded-2xl text-base mt-4 shadow-sm cursor-pointer inline-flex items-center justify-center gap-2"
               >
-                Request Appointment
-              </button>
+                <span>Request Appointment</span>
+                <ExternalLink className="w-4 h-4" />
+              </a>
             </motion.div>
           )}
         </AnimatePresence>
@@ -506,7 +545,7 @@ export default function App() {
                 <li><a href="#services" onClick={(e) => handleScrollTo(e, 'services')} className="text-gray-300 hover:text-brand-coral transition-colors">What We Do</a></li>
                 <li><a href="#professionals" onClick={(e) => handleScrollTo(e, 'professionals')} className="text-gray-300 hover:text-brand-coral transition-colors">Work With Us</a></li>
                 <li><a href="#locations" onClick={(e) => handleScrollTo(e, 'locations')} className="text-gray-300 hover:text-brand-coral transition-colors">Our Locations</a></li>
-                <li><button onClick={() => setIsRequestModalOpen(true)} className="text-gray-300 hover:text-brand-coral transition-colors text-left cursor-pointer">Request Appointment</button></li>
+                <li><a href="/request-appointment" target="_blank" rel="noopener noreferrer" className="text-gray-300 hover:text-brand-coral transition-colors inline-flex items-center gap-1"><span>Request Appointment</span> <ExternalLink className="w-3 h-3 opacity-70" /></a></li>
               </ul>
             </div>
             

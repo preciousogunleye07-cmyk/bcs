@@ -8,14 +8,20 @@ import {
 import { saveIntakeToSupabase, fetchBookedSlotsForDate, isDateAdministrativelyBlocked, ALL_STANDARD_TIME_SLOTS } from '../lib/supabase';
 
 interface AppointmentRequestFormProps {
-  isOpen: boolean;
-  onClose: () => void;
+  isOpen?: boolean;
+  onClose?: () => void;
   preselectedService?: string;
+  isFullPage?: boolean;
 }
 
 type FormTab = 'new-client' | 'returning-client';
 
-export default function AppointmentRequestForm({ isOpen, onClose, preselectedService }: AppointmentRequestFormProps) {
+export default function AppointmentRequestForm({ 
+  isOpen = true, 
+  onClose, 
+  preselectedService,
+  isFullPage = false 
+}: AppointmentRequestFormProps) {
   const [activeTab, setActiveTab] = useState<FormTab>('new-client');
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [formTypeSubmitted, setFormTypeSubmitted] = useState<FormTab>('new-client');
@@ -615,6 +621,907 @@ export default function AppointmentRequestForm({ isOpen, onClose, preselectedSer
   };
 
   if (!isOpen) return null;
+
+  if (isFullPage) {
+    return (
+      <div className="min-h-screen bg-brand-bg py-8 px-4 sm:px-6 lg:px-8 flex flex-col items-center justify-center">
+        <div className="max-w-4xl w-full mb-6 flex items-center justify-between">
+          <a
+            href="/"
+            className="inline-flex items-center gap-2 text-sm font-bold text-brand-dark hover:text-brand-coral transition-colors bg-white/80 backdrop-blur-sm px-4 py-2 rounded-full border border-neutral-200 shadow-xs"
+          >
+            ← Return to Home
+          </a>
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-brand-muted">Helpline:</span>
+            <a href="tel:410-977-2847" className="text-xs font-bold text-brand-dark hover:text-brand-coral">410-977-2847</a>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-3xl sm:rounded-[2.5rem] max-w-4xl w-full overflow-hidden shadow-float relative border border-neutral-100 flex flex-col">
+          {/* Modal Header */}
+          <div className="bg-brand-dark text-white p-6 sm:p-10 shrink-0 relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-64 h-64 rounded-full bg-brand-blue/10 blur-3xl pointer-events-none"></div>
+            <div className="absolute bottom-0 left-0 w-64 h-64 rounded-full bg-brand-green/5 blur-2xl pointer-events-none"></div>
+
+            <span className="text-[10px] font-bold uppercase tracking-widest text-brand-coral block mb-1">
+              Care Intake Office
+            </span>
+            <h1 className="text-2xl sm:text-4xl font-extrabold tracking-tight">Appointment Request Portal</h1>
+            <p className="text-gray-300 text-xs sm:text-sm mt-2 max-w-xl">
+              Please fill out our official clinic form. Our administrative staff will review your request and reach out to confirm details.
+            </p>
+
+            {/* Toggle Tabs */}
+            {!isSubmitted && (
+              <div className="flex bg-white/10 p-1 rounded-full mt-4 sm:mt-6 max-w-md border border-white/5">
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('new-client')}
+                  className={`flex-1 py-2 sm:py-2.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
+                    activeTab === 'new-client' 
+                      ? 'bg-white text-brand-dark shadow-sm' 
+                      : 'text-white/80 hover:text-white'
+                  }`}
+                >
+                  New Client Intake
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('returning-client')}
+                  className={`flex-1 py-2 sm:py-2.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
+                    activeTab === 'returning-client' 
+                      ? 'bg-white text-brand-dark shadow-sm' 
+                      : 'text-white/80 hover:text-white'
+                  }`}
+                >
+                  Returning Client
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* Form Scroll Body */}
+          <div className="p-4 sm:p-8 bg-[#F9FBFA]">
+            <AnimatePresence mode="wait">
+              {isSubmitted ? (
+                <motion.div 
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  className="py-12 px-6 text-center space-y-6 max-w-lg mx-auto"
+                >
+                  <div className="w-20 h-20 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto shadow-sm">
+                    <Check className="w-10 h-10" />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-700 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200">
+                      Request Reference: {requestNumber}
+                    </span>
+                    <h3 className="text-2xl sm:text-3xl font-extrabold text-brand-dark">Appointment Request Received!</h3>
+                    <p className="text-sm text-brand-muted leading-relaxed">
+                      Thank you for submitting your {formTypeSubmitted === 'new-client' ? 'New Client Intake' : 'Returning Client'} appointment request to BalanceCare Health Services.
+                    </p>
+                  </div>
+
+                  <div className="p-4 rounded-2xl bg-white border border-neutral-200 text-left text-xs text-brand-dark space-y-2 shadow-xs">
+                    <p className="font-bold flex items-center gap-1.5 text-brand-dark">
+                      <ClipboardCheck className="w-4 h-4 text-emerald-600" />
+                      What happens next:
+                    </p>
+                    <ul className="list-disc pl-5 space-y-1 text-brand-muted">
+                      <li>Our care coordinator reviews clinical intake and schedule alignment.</li>
+                      <li>We contact you via your preferred reminder method within 1-2 business days.</li>
+                      <li>For immediate crisis or emergency, call 911 or 988 directly.</li>
+                    </ul>
+                  </div>
+
+                  <div className="pt-4 flex flex-col sm:flex-row gap-3 justify-center">
+                    <a
+                      href="/"
+                      className="bg-brand-dark hover:bg-brand-dark/90 text-white font-bold py-3.5 px-8 rounded-full text-xs shadow-sm transition-all text-center inline-block"
+                    >
+                      Return to Home
+                    </a>
+                    <button
+                      onClick={resetForms}
+                      className="border border-neutral-300 hover:bg-neutral-50 text-brand-dark font-bold py-3.5 px-8 rounded-full text-xs transition-all cursor-pointer"
+                    >
+                      Submit Another Request
+                    </button>
+                  </div>
+                </motion.div>
+              ) : (
+                <div className="space-y-8">
+                  {activeTab === 'new-client' ? (
+                    // New Client Form Rendered in Full Page
+                    <form onSubmit={handleNewClientSubmit} className="space-y-6">
+                      {/* SECTION 1: CLIENT INFORMATION */}
+                      <div className="bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-8 border border-neutral-200/50 shadow-sm space-y-4 text-left">
+                        <h3 className="text-lg font-bold text-brand-dark flex items-center gap-2 border-b border-neutral-100 pb-3">
+                          <User className="w-5 h-5 text-brand-coral" />
+                          1. Client Information
+                        </h3>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                          <div>
+                            <label className="block text-[11px] font-bold uppercase tracking-wider text-brand-dark mb-1">Full Legal Name <span className="text-brand-coral">*</span></label>
+                            <input 
+                              type="text" 
+                              required 
+                              placeholder="e.g. Jane Doe"
+                              value={newClientData.fullName}
+                              onChange={e => setNewClientData({ ...newClientData, fullName: e.target.value })}
+                              className="w-full p-3 bg-neutral-50 border border-neutral-200 rounded-xl text-sm focus:ring-2 focus:ring-brand-coral/20 focus:border-brand-coral outline-none"
+                            />
+                          </div>
+                          <div>
+                            <div className="flex items-center justify-between mb-1">
+                              <label className="block text-[11px] font-bold uppercase tracking-wider text-brand-dark">Date of Birth <span className="text-brand-coral">*</span></label>
+                              <button 
+                                type="button" 
+                                onClick={() => enableNewClientDobManual(!newClientDobManual)}
+                                className="text-[10px] text-brand-coral font-bold hover:underline cursor-pointer"
+                              >
+                                {newClientDobManual ? 'Use Calendar Picker' : 'Type MM/DD/YYYY'}
+                              </button>
+                            </div>
+                            {newClientDobManual ? (
+                              <div className="grid grid-cols-3 gap-2">
+                                <input
+                                  type="text"
+                                  inputMode="numeric"
+                                  maxLength={2}
+                                  placeholder="MM"
+                                  required
+                                  value={newClientDobParts.month}
+                                  onChange={e => handleNewClientDobChange('month', e.target.value.replace(/\D/g, ''))}
+                                  className="w-full p-3 bg-neutral-50 border border-neutral-200 rounded-xl text-sm text-center focus:ring-2 focus:ring-brand-coral/20 focus:border-brand-coral outline-none font-semibold text-brand-dark"
+                                />
+                                <input
+                                  type="text"
+                                  inputMode="numeric"
+                                  maxLength={2}
+                                  placeholder="DD"
+                                  required
+                                  value={newClientDobParts.day}
+                                  onChange={e => handleNewClientDobChange('day', e.target.value.replace(/\D/g, ''))}
+                                  className="w-full p-3 bg-neutral-50 border border-neutral-200 rounded-xl text-sm text-center focus:ring-2 focus:ring-brand-coral/20 focus:border-brand-coral outline-none font-semibold text-brand-dark"
+                                />
+                                <input
+                                  type="text"
+                                  inputMode="numeric"
+                                  maxLength={4}
+                                  placeholder="YYYY"
+                                  required
+                                  value={newClientDobParts.year}
+                                  onChange={e => handleNewClientDobChange('year', e.target.value.replace(/\D/g, ''))}
+                                  className="w-full p-3 bg-neutral-50 border border-neutral-200 rounded-xl text-sm text-center focus:ring-2 focus:ring-brand-coral/20 focus:border-brand-coral outline-none font-semibold text-brand-dark"
+                                />
+                              </div>
+                            ) : (
+                              <input 
+                                type="date" 
+                                required 
+                                value={newClientData.dob}
+                                onChange={e => setNewClientData({ ...newClientData, dob: e.target.value })}
+                                className="w-full p-3 bg-neutral-50 border border-neutral-200 rounded-xl text-sm focus:ring-2 focus:ring-brand-coral/20 focus:border-brand-coral outline-none text-brand-muted"
+                              />
+                            )}
+                          </div>
+                          <div>
+                            <label className="block text-[11px] font-bold uppercase tracking-wider text-brand-dark mb-1">Age</label>
+                            <input 
+                              type="number" 
+                              placeholder="e.g. 32"
+                              value={newClientData.age}
+                              onChange={e => setNewClientData({ ...newClientData, age: e.target.value })}
+                              className="w-full p-3 bg-neutral-50 border border-neutral-200 rounded-xl text-sm focus:ring-2 focus:ring-brand-coral/20 focus:border-brand-coral outline-none"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-[11px] font-bold uppercase tracking-wider text-brand-dark mb-1">Gender / Identity</label>
+                            <input 
+                              type="text" 
+                              placeholder="e.g. Female, Male, Non-binary"
+                              value={newClientData.gender}
+                              onChange={e => setNewClientData({ ...newClientData, gender: e.target.value })}
+                              className="w-full p-3 bg-neutral-50 border border-neutral-200 rounded-xl text-sm focus:ring-2 focus:ring-brand-coral/20 focus:border-brand-coral outline-none"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-[11px] font-bold uppercase tracking-wider text-brand-dark mb-1">Parent/Guardian Name (If Minor)</label>
+                            <input 
+                              type="text" 
+                              placeholder="Optional"
+                              value={newClientData.parentGuardian}
+                              onChange={e => setNewClientData({ ...newClientData, parentGuardian: e.target.value })}
+                              className="w-full p-3 bg-neutral-50 border border-neutral-200 rounded-xl text-sm focus:ring-2 focus:ring-brand-coral/20 focus:border-brand-coral outline-none"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-[11px] font-bold uppercase tracking-wider text-brand-dark mb-1">Relationship to Client (If Minor)</label>
+                            <input 
+                              type="text" 
+                              placeholder="e.g. Mother, Father, Guardian"
+                              value={newClientData.relationshipToClient}
+                              onChange={e => setNewClientData({ ...newClientData, relationshipToClient: e.target.value })}
+                              className="w-full p-3 bg-neutral-50 border border-neutral-200 rounded-xl text-sm focus:ring-2 focus:ring-brand-coral/20 focus:border-brand-coral outline-none"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-[11px] font-bold uppercase tracking-wider text-brand-dark mb-1">Phone Number <span className="text-brand-coral">*</span></label>
+                            <input 
+                              type="tel" 
+                              required 
+                              placeholder="(410) 000-0000"
+                              value={newClientData.phone}
+                              onChange={e => setNewClientData({ ...newClientData, phone: e.target.value })}
+                              className="w-full p-3 bg-neutral-50 border border-neutral-200 rounded-xl text-sm focus:ring-2 focus:ring-brand-coral/20 focus:border-brand-coral outline-none"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-[11px] font-bold uppercase tracking-wider text-brand-dark mb-1">Email Address <span className="text-brand-coral">*</span></label>
+                            <input 
+                              type="email" 
+                              required 
+                              placeholder="client@example.com"
+                              value={newClientData.email}
+                              onChange={e => setNewClientData({ ...newClientData, email: e.target.value })}
+                              className="w-full p-3 bg-neutral-50 border border-neutral-200 rounded-xl text-sm focus:ring-2 focus:ring-brand-coral/20 focus:border-brand-coral outline-none"
+                            />
+                          </div>
+                        </div>
+                        <div className="pt-2">
+                          <label className="block text-[11px] font-bold uppercase tracking-wider text-brand-dark mb-1">Home Address</label>
+                          <input 
+                            type="text" 
+                            placeholder="Street, City, State, ZIP"
+                            value={newClientData.homeAddress}
+                            onChange={e => setNewClientData({ ...newClientData, homeAddress: e.target.value })}
+                            className="w-full p-3 bg-neutral-50 border border-neutral-200 rounded-xl text-sm focus:ring-2 focus:ring-brand-coral/20 focus:border-brand-coral outline-none"
+                          />
+                        </div>
+                      </div>
+
+                      {/* SECTION 2: REASON FOR SEEKING SERVICES */}
+                      <div className="bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-8 border border-neutral-200/50 shadow-sm space-y-4 text-left">
+                        <h3 className="text-lg font-bold text-brand-dark flex items-center gap-2 border-b border-neutral-100 pb-3">
+                          <Heart className="w-5 h-5 text-brand-coral" />
+                          2. Reason for Seeking Services
+                        </h3>
+                        <p className="text-xs text-brand-muted">Select all clinical topics that apply to your current situation:</p>
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+                          {[
+                            'Depression', 'Anxiety / Panic', 'ADHD / Focus', 'Trauma / PTSD',
+                            'Bipolar Disorder', 'Medication Evaluation', 'Substance / Addiction Support',
+                            'Child / Adolescent Behavioral Support', 'Family Counseling',
+                            'Home Health Care / DDA Waiver Services', 'Autism Spectrum Support', 'Other'
+                          ].map(reason => (
+                            <label 
+                              key={reason} 
+                              className={`flex items-center gap-2 p-3 rounded-xl border text-xs font-semibold cursor-pointer transition-colors ${
+                                newClientData.reasons.includes(reason)
+                                  ? 'bg-brand-coral/10 border-brand-coral text-brand-dark'
+                                  : 'bg-neutral-50 border-neutral-200 hover:bg-neutral-100/70 text-brand-dark'
+                              }`}
+                            >
+                              <input 
+                                type="checkbox"
+                                checked={newClientData.reasons.includes(reason)}
+                                onChange={() => toggleReasonNewClient(reason)}
+                                className="text-brand-coral focus:ring-brand-coral rounded"
+                              />
+                              <span>{reason}</span>
+                            </label>
+                          ))}
+                        </div>
+
+                        {newClientData.reasons.includes('Other') && (
+                          <div className="pt-2">
+                            <label className="block text-[11px] font-bold uppercase tracking-wider text-brand-dark mb-1">Please Specify Other Reason</label>
+                            <input 
+                              type="text" 
+                              placeholder="Describe here..."
+                              value={newClientData.otherReason}
+                              onChange={e => setNewClientData({ ...newClientData, otherReason: e.target.value })}
+                              className="w-full p-3 bg-neutral-50 border border-neutral-200 rounded-xl text-sm focus:ring-2 focus:ring-brand-coral/20 focus:border-brand-coral outline-none"
+                            />
+                          </div>
+                        )}
+
+                        <div className="pt-2">
+                          <label className="block text-[11px] font-bold uppercase tracking-wider text-brand-dark mb-1">Brief Description of Primary Concerns</label>
+                          <textarea 
+                            rows={3}
+                            placeholder="Share anything you would like our clinical staff to know beforehand..."
+                            value={newClientData.concernsDescription}
+                            onChange={e => setNewClientData({ ...newClientData, concernsDescription: e.target.value })}
+                            className="w-full p-3 bg-neutral-50 border border-neutral-200 rounded-xl text-sm focus:ring-2 focus:ring-brand-coral/20 focus:border-brand-coral outline-none"
+                          />
+                        </div>
+                      </div>
+
+                      {/* SECTION 3: PAYMENT / INSURANCE INFORMATION */}
+                      <div className="bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-8 border border-neutral-200/50 shadow-sm space-y-4 text-left">
+                        <h3 className="text-lg font-bold text-brand-dark flex items-center gap-2 border-b border-neutral-100 pb-3">
+                          <CreditCard className="w-5 h-5 text-brand-coral" />
+                          3. Payment &amp; Insurance Information
+                        </h3>
+                        
+                        <div className="flex gap-4">
+                          <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-brand-dark">
+                            <input 
+                              type="radio" 
+                              name="paymentMethodFull" 
+                              value="Insurance"
+                              checked={newClientData.paymentMethod === 'Insurance'}
+                              onChange={e => setNewClientData({ ...newClientData, paymentMethod: e.target.value })}
+                              className="text-brand-coral focus:ring-brand-coral"
+                            />
+                            Insurance Coverage
+                          </label>
+                          <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-brand-dark">
+                            <input 
+                              type="radio" 
+                              name="paymentMethodFull" 
+                              value="Self-Pay"
+                              checked={newClientData.paymentMethod === 'Self-Pay'}
+                              onChange={e => setNewClientData({ ...newClientData, paymentMethod: e.target.value })}
+                              className="text-brand-coral focus:ring-brand-coral"
+                            />
+                            Self-Pay / Out-of-Pocket
+                          </label>
+                        </div>
+
+                        {newClientData.paymentMethod === 'Insurance' ? (
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+                            <div>
+                              <label className="block text-[11px] font-bold uppercase tracking-wider text-brand-dark mb-1">Insurance Company <span className="text-brand-coral">*</span></label>
+                              <input 
+                                type="text" 
+                                required={newClientData.paymentMethod === 'Insurance'}
+                                placeholder="e.g. CareFirst, Medicaid, Carelon, Cigna"
+                                value={newClientData.insuranceCompany}
+                                onChange={e => setNewClientData({ ...newClientData, insuranceCompany: e.target.value })}
+                                className="w-full p-3 bg-neutral-50 border border-neutral-200 rounded-xl text-sm focus:ring-2 focus:ring-brand-coral/20 focus:border-brand-coral outline-none"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-[11px] font-bold uppercase tracking-wider text-brand-dark mb-1">Member / Subscriber ID <span className="text-brand-coral">*</span></label>
+                              <input 
+                                type="text" 
+                                required={newClientData.paymentMethod === 'Insurance'}
+                                placeholder="e.g. W123456789"
+                                value={newClientData.memberId}
+                                onChange={e => setNewClientData({ ...newClientData, memberId: e.target.value })}
+                                className="w-full p-3 bg-neutral-50 border border-neutral-200 rounded-xl text-sm focus:ring-2 focus:ring-brand-coral/20 focus:border-brand-coral outline-none"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-[11px] font-bold uppercase tracking-wider text-brand-dark mb-1">Group Number</label>
+                              <input 
+                                type="text" 
+                                placeholder="Optional"
+                                value={newClientData.groupNumber}
+                                onChange={e => setNewClientData({ ...newClientData, groupNumber: e.target.value })}
+                                className="w-full p-3 bg-neutral-50 border border-neutral-200 rounded-xl text-sm focus:ring-2 focus:ring-brand-coral/20 focus:border-brand-coral outline-none"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-[11px] font-bold uppercase tracking-wider text-brand-dark mb-1">Policy Holder Full Name</label>
+                              <input 
+                                type="text" 
+                                placeholder="If different from client"
+                                value={newClientData.policyHolder}
+                                onChange={e => setNewClientData({ ...newClientData, policyHolder: e.target.value })}
+                                className="w-full p-3 bg-neutral-50 border border-neutral-200 rounded-xl text-sm focus:ring-2 focus:ring-brand-coral/20 focus:border-brand-coral outline-none"
+                              />
+                            </div>
+                            <div>
+                              <div className="flex items-center justify-between mb-1">
+                                <label className="block text-[11px] font-bold uppercase tracking-wider text-brand-dark">Policy Holder Date of Birth</label>
+                                <button 
+                                  type="button" 
+                                  onClick={() => enablePolicyHolderDobManual(!policyHolderDobManual)}
+                                  className="text-[10px] text-brand-coral font-bold hover:underline cursor-pointer"
+                                >
+                                  {policyHolderDobManual ? 'Use Calendar Picker' : 'Type MM/DD/YYYY'}
+                                </button>
+                              </div>
+                              {policyHolderDobManual ? (
+                                <div className="grid grid-cols-3 gap-2">
+                                  <input
+                                    type="text"
+                                    inputMode="numeric"
+                                    maxLength={2}
+                                    placeholder="MM"
+                                    value={policyHolderDobParts.month}
+                                    onChange={e => handlePolicyHolderDobChange('month', e.target.value.replace(/\D/g, ''))}
+                                    className="w-full p-3 bg-neutral-50 border border-neutral-200 rounded-xl text-sm text-center focus:ring-2 focus:ring-brand-coral/20 focus:border-brand-coral outline-none font-semibold text-brand-dark"
+                                  />
+                                  <input
+                                    type="text"
+                                    inputMode="numeric"
+                                    maxLength={2}
+                                    placeholder="DD"
+                                    value={policyHolderDobParts.day}
+                                    onChange={e => handlePolicyHolderDobChange('day', e.target.value.replace(/\D/g, ''))}
+                                    className="w-full p-3 bg-neutral-50 border border-neutral-200 rounded-xl text-sm text-center focus:ring-2 focus:ring-brand-coral/20 focus:border-brand-coral outline-none font-semibold text-brand-dark"
+                                  />
+                                  <input
+                                    type="text"
+                                    inputMode="numeric"
+                                    maxLength={4}
+                                    placeholder="YYYY"
+                                    value={policyHolderDobParts.year}
+                                    onChange={e => handlePolicyHolderDobChange('year', e.target.value.replace(/\D/g, ''))}
+                                    className="w-full p-3 bg-neutral-50 border border-neutral-200 rounded-xl text-sm text-center focus:ring-2 focus:ring-brand-coral/20 focus:border-brand-coral outline-none font-semibold text-brand-dark"
+                                  />
+                                </div>
+                              ) : (
+                                <input 
+                                  type="date" 
+                                  value={newClientData.policyHolderDob}
+                                  onChange={e => setNewClientData({ ...newClientData, policyHolderDob: e.target.value })}
+                                  className="w-full p-3 bg-neutral-50 border border-neutral-200 rounded-xl text-sm focus:ring-2 focus:ring-brand-coral/20 focus:border-brand-coral outline-none text-brand-muted"
+                                />
+                              )}
+                            </div>
+                            <div>
+                              <label className="block text-[11px] font-bold uppercase tracking-wider text-brand-dark mb-1">Relationship to Policy Holder</label>
+                              <input 
+                                type="text" 
+                                placeholder="e.g. Self, Spouse, Child"
+                                value={newClientData.relationshipToPolicyHolder}
+                                onChange={e => setNewClientData({ ...newClientData, relationshipToPolicyHolder: e.target.value })}
+                                className="w-full p-3 bg-neutral-50 border border-neutral-200 rounded-xl text-sm focus:ring-2 focus:ring-brand-coral/20 focus:border-brand-coral outline-none"
+                              />
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="p-4 rounded-xl bg-neutral-50 border border-neutral-200 space-y-2">
+                            <label className="flex items-start gap-2.5 cursor-pointer">
+                              <input 
+                                type="checkbox"
+                                required={newClientData.paymentMethod === 'Self-Pay'}
+                                checked={newClientData.selfPayAcknowledge}
+                                onChange={e => setNewClientData({ ...newClientData, selfPayAcknowledge: e.target.checked })}
+                                className="text-brand-coral focus:ring-brand-coral shrink-0 mt-0.5 rounded"
+                              />
+                              <span className="text-xs text-brand-dark font-medium leading-relaxed">
+                                I understand that I am electing self-pay rates and will be responsible for payment at the time of clinical service.
+                              </span>
+                            </label>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* SECTION 4: APPOINTMENT PREFERENCES */}
+                      <div className="bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-8 border border-neutral-200/50 shadow-sm space-y-4 text-left">
+                        <h3 className="text-lg font-bold text-brand-dark flex items-center gap-2 border-b border-neutral-100 pb-3">
+                          <Calendar className="w-5 h-5 text-brand-coral" />
+                          4. Preferred Appointment Details
+                        </h3>
+
+                        <div className="space-y-4">
+                          <div>
+                            <label className="block text-[11px] font-bold uppercase tracking-wider text-brand-dark mb-1">Preferred Clinic Format <span className="text-brand-coral">*</span></label>
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                              {[
+                                { id: 'Columbia, MD Office', label: 'Columbia, MD Clinic', icon: MapPin },
+                                { id: 'Washington, DC Office', label: 'Washington, DC Clinic', icon: MapPin },
+                                { id: 'Virtual Telehealth', label: 'Virtual Telehealth', icon: Clock }
+                              ].map(loc => (
+                                <label 
+                                  key={loc.id}
+                                  className={`flex items-center gap-2.5 p-3.5 rounded-xl border text-xs font-bold cursor-pointer transition-colors ${
+                                    newClientData.location === loc.id 
+                                      ? 'bg-brand-coral/10 border-brand-coral text-brand-dark' 
+                                      : 'bg-neutral-50 border-neutral-200 hover:bg-neutral-100/70 text-brand-dark'
+                                  }`}
+                                >
+                                  <input 
+                                    type="radio" 
+                                    name="locationFull" 
+                                    required 
+                                    value={loc.id}
+                                    checked={newClientData.location === loc.id}
+                                    onChange={e => setNewClientData({ ...newClientData, location: e.target.value })}
+                                    className="text-brand-coral focus:ring-brand-coral"
+                                  />
+                                  <loc.icon className="w-4 h-4 text-brand-coral" />
+                                  <span>{loc.label}</span>
+                                </label>
+                              ))}
+                            </div>
+                          </div>
+
+                          <div>
+                            <label className="block text-[11px] font-bold uppercase tracking-wider text-brand-dark mb-1">Preferred Days of Week</label>
+                            <div className="flex flex-wrap gap-2">
+                              {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'].map(day => (
+                                <label 
+                                  key={day}
+                                  className={`px-4 py-2 rounded-xl border text-xs font-semibold cursor-pointer transition-colors ${
+                                    newClientData.preferredDays.includes(day)
+                                      ? 'bg-brand-coral/10 border-brand-coral text-brand-dark'
+                                      : 'bg-neutral-50 border-neutral-200 hover:bg-neutral-100/70 text-brand-dark'
+                                  }`}
+                                >
+                                  <input 
+                                    type="checkbox"
+                                    checked={newClientData.preferredDays.includes(day)}
+                                    onChange={() => toggleDayNewClient(day)}
+                                    className="sr-only"
+                                  />
+                                  <span>{day}</span>
+                                </label>
+                              ))}
+                            </div>
+                          </div>
+
+                          <div>
+                            <label className="block text-[11px] font-bold uppercase tracking-wider text-brand-dark mb-1">Preferred Time of Day</label>
+                            <div className="flex flex-wrap gap-2">
+                              {['Morning (8am - 12pm)', 'Afternoon (12pm - 4pm)', 'Evening (4pm - 7pm)'].map(time => (
+                                <label 
+                                  key={time}
+                                  className={`px-4 py-2 rounded-xl border text-xs font-semibold cursor-pointer transition-colors ${
+                                    newClientData.preferredTimes.includes(time)
+                                      ? 'bg-brand-coral/10 border-brand-coral text-brand-dark'
+                                      : 'bg-neutral-50 border-neutral-200 hover:bg-neutral-100/70 text-brand-dark'
+                                  }`}
+                                >
+                                  <input 
+                                    type="checkbox"
+                                    checked={newClientData.preferredTimes.includes(time)}
+                                    onChange={() => toggleTimeNewClient(time)}
+                                    className="sr-only"
+                                  />
+                                  <span>{time}</span>
+                                </label>
+                              ))}
+                            </div>
+                          </div>
+
+                          <div>
+                            <div className="flex items-center justify-between mb-1">
+                              <label className="block text-[11px] font-bold uppercase tracking-wider text-brand-dark">Target Booking Date (Optional)</label>
+                              {newClientData.preferredDate && (
+                                isLoadingNewClientSlots ? (
+                                  <span className="inline-flex items-center gap-1 text-brand-coral text-xs font-bold">
+                                    <Loader2 className="w-3 h-3 animate-spin" /> Checking availability...
+                                  </span>
+                                ) : isDateAdministrativelyBlocked(newClientData.preferredDate).blocked ? (
+                                  <span className="inline-flex items-center gap-1 text-rose-700 font-bold bg-rose-50 px-2 py-0.5 rounded-full border border-rose-200 text-xs">
+                                    <Lock className="w-3 h-3 text-rose-600" /> Date Blocked (0 slots left)
+                                  </span>
+                                ) : newClientBookedSlots.length >= ALL_STANDARD_TIME_SLOTS.length ? (
+                                  <span className="inline-flex items-center gap-1 text-red-600 font-bold bg-red-50 px-2 py-0.5 rounded-full border border-red-200 text-xs">
+                                    <Lock className="w-3 h-3" /> Fully Booked (0 slots left)
+                                  </span>
+                                ) : (
+                                  <span className="inline-flex items-center gap-1 text-emerald-700 font-bold bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200 text-xs">
+                                    <Check className="w-3 h-3" /> {ALL_STANDARD_TIME_SLOTS.length - newClientBookedSlots.length} Open Slot(s) in DB
+                                  </span>
+                                )
+                              )}
+                            </div>
+                            <input 
+                              type="date" 
+                              value={newClientData.preferredDate}
+                              onChange={e => setNewClientData({ ...newClientData, preferredDate: e.target.value })}
+                              className="w-full p-3 bg-neutral-50 border border-neutral-200 rounded-xl text-sm focus:ring-2 focus:ring-brand-coral/20 focus:border-brand-coral outline-none text-brand-muted"
+                            />
+                            {newClientData.preferredDate && isDateAdministrativelyBlocked(newClientData.preferredDate).blocked && (
+                              <p className="text-xs text-rose-700 font-semibold mt-1.5 flex items-center gap-1 bg-rose-50 border border-rose-200 p-2 rounded-lg">
+                                <Lock className="w-3.5 h-3.5 shrink-0 text-rose-600" />
+                                {isDateAdministrativelyBlocked(newClientData.preferredDate).reason || 'This date is administratively blocked. Please pick another date.'}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* SECTION 5: CONSENT & SUBMISSION */}
+                      <div className="bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-8 border border-neutral-200/50 shadow-sm space-y-6 text-left">
+                        <h3 className="text-lg font-bold text-brand-dark flex items-center gap-2 border-b border-neutral-100 pb-3">
+                          <ShieldCheck className="w-5 h-5 text-brand-coral" />
+                          5. Consent &amp; Submit
+                        </h3>
+
+                        <label className="flex items-start gap-3 cursor-pointer p-4 rounded-2xl bg-neutral-50 border border-neutral-200 hover:bg-neutral-100/50 transition-colors">
+                          <input 
+                            type="checkbox"
+                            required
+                            checked={newClientData.consentUnderstand}
+                            onChange={e => setNewClientData({ ...newClientData, consentUnderstand: e.target.checked })}
+                            className="text-brand-coral focus:ring-brand-coral shrink-0 mt-0.5 rounded"
+                          />
+                          <p className="text-xs text-brand-dark font-semibold leading-relaxed">
+                            I understand that this represents an appointment scheduling request only, and is not finalized nor confirmed until I receive formal confirmation from the administration staff at BalanceCare Health Services. <span className="text-brand-coral font-bold">*</span>
+                          </p>
+                        </label>
+
+                        {submissionError && (
+                          <div className="p-4 bg-red-50 border border-red-200 rounded-2xl text-red-700 text-xs font-semibold leading-relaxed">
+                            {submissionError}
+                          </div>
+                        )}
+
+                        <div className="pt-4 flex justify-end">
+                          <button
+                            type="submit"
+                            disabled={isSubmitting}
+                            className={`bg-gradient-to-r from-brand-green to-brand-blue hover:from-brand-greenHover hover:to-brand-blueHover text-white font-bold py-4 px-10 rounded-full text-xs shadow-md shadow-brand-blue/10 hover:shadow-brand-blue/20 transition-all flex items-center gap-2 cursor-pointer ${isSubmitting ? 'opacity-70 cursor-not-allowed' : ''}`}
+                          >
+                            {isSubmitting ? (
+                              <>
+                                <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                                </svg>
+                                Submitting Request...
+                              </>
+                            ) : (
+                              <>Submit New Client Request <ArrowRight className="w-4 h-4" /></>
+                            )}
+                          </button>
+                        </div>
+                      </div>
+                    </form>
+                  ) : (
+                    // Returning Client Form in Full Page
+                    <form onSubmit={handleReturningClientSubmit} className="space-y-6">
+                      {/* SECTION 1: CLIENT INFORMATION */}
+                      <div className="bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-8 border border-neutral-200/50 shadow-sm space-y-4 text-left">
+                        <h3 className="text-lg font-bold text-brand-dark flex items-center gap-2 border-b border-neutral-100 pb-3">
+                          <User className="w-5 h-5 text-brand-coral" />
+                          1. Returning Client Verification
+                        </h3>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                          <div>
+                            <label className="block text-[11px] font-bold uppercase tracking-wider text-brand-dark mb-1">Full Legal Name <span className="text-brand-coral">*</span></label>
+                            <input 
+                              type="text" 
+                              required 
+                              placeholder="e.g. Jane Doe"
+                              value={returningClientData.fullName}
+                              onChange={e => setReturningClientData({ ...returningClientData, fullName: e.target.value })}
+                              className="w-full p-3 bg-neutral-50 border border-neutral-200 rounded-xl text-sm focus:ring-2 focus:ring-brand-coral/20 focus:border-brand-coral outline-none"
+                            />
+                          </div>
+                          <div>
+                            <div className="flex items-center justify-between mb-1">
+                              <label className="block text-[11px] font-bold uppercase tracking-wider text-brand-dark">Date of Birth <span className="text-brand-coral">*</span></label>
+                              <button 
+                                type="button" 
+                                onClick={() => enableReturningClientDobManual(!returningClientDobManual)}
+                                className="text-[10px] text-brand-coral font-bold hover:underline cursor-pointer"
+                              >
+                                {returningClientDobManual ? 'Use Calendar Picker' : 'Type MM/DD/YYYY'}
+                              </button>
+                            </div>
+                            {returningClientDobManual ? (
+                              <div className="grid grid-cols-3 gap-2">
+                                <input
+                                  type="text"
+                                  inputMode="numeric"
+                                  maxLength={2}
+                                  placeholder="MM"
+                                  required
+                                  value={returningClientDobParts.month}
+                                  onChange={e => handleReturningClientDobChange('month', e.target.value.replace(/\D/g, ''))}
+                                  className="w-full p-3 bg-neutral-50 border border-neutral-200 rounded-xl text-sm text-center focus:ring-2 focus:ring-brand-coral/20 focus:border-brand-coral outline-none font-semibold text-brand-dark"
+                                />
+                                <input
+                                  type="text"
+                                  inputMode="numeric"
+                                  maxLength={2}
+                                  placeholder="DD"
+                                  required
+                                  value={returningClientDobParts.day}
+                                  onChange={e => handleReturningClientDobChange('day', e.target.value.replace(/\D/g, ''))}
+                                  className="w-full p-3 bg-neutral-50 border border-neutral-200 rounded-xl text-sm text-center focus:ring-2 focus:ring-brand-coral/20 focus:border-brand-coral outline-none font-semibold text-brand-dark"
+                                />
+                                <input
+                                  type="text"
+                                  inputMode="numeric"
+                                  maxLength={4}
+                                  placeholder="YYYY"
+                                  required
+                                  value={returningClientDobParts.year}
+                                  onChange={e => handleReturningClientDobChange('year', e.target.value.replace(/\D/g, ''))}
+                                  className="w-full p-3 bg-neutral-50 border border-neutral-200 rounded-xl text-sm text-center focus:ring-2 focus:ring-brand-coral/20 focus:border-brand-coral outline-none font-semibold text-brand-dark"
+                                />
+                              </div>
+                            ) : (
+                              <input 
+                                type="date" 
+                                required 
+                                value={returningClientData.dob}
+                                onChange={e => setReturningClientData({ ...returningClientData, dob: e.target.value })}
+                                className="w-full p-3 bg-neutral-50 border border-neutral-200 rounded-xl text-sm focus:ring-2 focus:ring-brand-coral/20 focus:border-brand-coral outline-none text-brand-muted"
+                              />
+                            )}
+                          </div>
+                          <div>
+                            <label className="block text-[11px] font-bold uppercase tracking-wider text-brand-dark mb-1">Phone Number <span className="text-brand-coral">*</span></label>
+                            <input 
+                              type="tel" 
+                              required 
+                              placeholder="(410) 000-0000"
+                              value={returningClientData.phone}
+                              onChange={e => setReturningClientData({ ...returningClientData, phone: e.target.value })}
+                              className="w-full p-3 bg-neutral-50 border border-neutral-200 rounded-xl text-sm focus:ring-2 focus:ring-brand-coral/20 focus:border-brand-coral outline-none"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-[11px] font-bold uppercase tracking-wider text-brand-dark mb-1">Email Address <span className="text-brand-coral">*</span></label>
+                            <input 
+                              type="email" 
+                              required 
+                              placeholder="client@example.com"
+                              value={returningClientData.email}
+                              onChange={e => setReturningClientData({ ...returningClientData, email: e.target.value })}
+                              className="w-full p-3 bg-neutral-50 border border-neutral-200 rounded-xl text-sm focus:ring-2 focus:ring-brand-coral/20 focus:border-brand-coral outline-none"
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* SECTION 2: APPOINTMENT INFO */}
+                      <div className="bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-8 border border-neutral-200/50 shadow-sm space-y-4 text-left">
+                        <h3 className="text-lg font-bold text-brand-dark flex items-center gap-2 border-b border-neutral-100 pb-3">
+                          <Clock className="w-5 h-5 text-brand-coral" />
+                          2. Provider &amp; History
+                        </h3>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                          <div>
+                            <label className="block text-[11px] font-bold uppercase tracking-wider text-brand-dark mb-1">Primary Therapist / Provider Name</label>
+                            <input 
+                              type="text" 
+                              placeholder="e.g. Dr. Campbell, Nurse Practitioner"
+                              value={returningClientData.providerName}
+                              onChange={e => setReturningClientData({ ...returningClientData, providerName: e.target.value })}
+                              className="w-full p-3 bg-neutral-50 border border-neutral-200 rounded-xl text-sm focus:ring-2 focus:ring-brand-coral/20 focus:border-brand-coral outline-none"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-[11px] font-bold uppercase tracking-wider text-brand-dark mb-1">Approximate Last Appointment Date</label>
+                            <input 
+                              type="date" 
+                              value={returningClientData.lastAppointmentDate}
+                              onChange={e => setReturningClientData({ ...returningClientData, lastAppointmentDate: e.target.value })}
+                              className="w-full p-3 bg-neutral-50 border border-neutral-200 rounded-xl text-sm focus:ring-2 focus:ring-brand-coral/20 focus:border-brand-coral outline-none text-brand-muted"
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* SECTION 3: APPOINTMENT PREFERENCE */}
+                      <div className="bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-8 border border-neutral-200/50 shadow-sm space-y-4 text-left">
+                        <h3 className="text-lg font-bold text-brand-dark flex items-center gap-2 border-b border-neutral-100 pb-3">
+                          <Calendar className="w-5 h-5 text-brand-coral" />
+                          3. Follow-Up Schedule Preference
+                        </h3>
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                          {[
+                            { id: 'Columbia, MD Office', label: 'Columbia, MD Clinic', icon: MapPin },
+                            { id: 'Washington, DC Office', label: 'Washington, DC Clinic', icon: MapPin },
+                            { id: 'Virtual Telehealth', label: 'Virtual Telehealth', icon: Clock }
+                          ].map(loc => (
+                            <label 
+                              key={loc.id}
+                              className={`flex items-center gap-2.5 p-3.5 rounded-xl border text-xs font-bold cursor-pointer transition-colors ${
+                                returningClientData.location === loc.id 
+                                  ? 'bg-brand-coral/10 border-brand-coral text-brand-dark' 
+                                  : 'bg-neutral-50 border-neutral-200 hover:bg-neutral-100/70 text-brand-dark'
+                              }`}
+                            >
+                              <input 
+                                type="radio" 
+                                name="locationReturningFull" 
+                                required 
+                                value={loc.id}
+                                checked={returningClientData.location === loc.id}
+                                onChange={e => setReturningClientData({ ...returningClientData, location: e.target.value })}
+                                className="text-brand-coral focus:ring-brand-coral"
+                              />
+                              <loc.icon className="w-4 h-4 text-brand-coral" />
+                              <span>{loc.label}</span>
+                            </label>
+                          ))}
+                        </div>
+
+                        <div>
+                          <div className="flex items-center justify-between mb-1">
+                            <label className="block text-[11px] font-bold uppercase tracking-wider text-brand-dark">Target Follow-Up Date</label>
+                            {returningClientData.preferredDate && (
+                              isLoadingReturningSlots ? (
+                                <span className="inline-flex items-center gap-1 text-brand-coral text-xs font-bold">
+                                  <Loader2 className="w-3 h-3 animate-spin" /> Checking availability...
+                                </span>
+                              ) : isDateAdministrativelyBlocked(returningClientData.preferredDate).blocked ? (
+                                <span className="inline-flex items-center gap-1 text-rose-700 font-bold bg-rose-50 px-2 py-0.5 rounded-full border border-rose-200 text-xs">
+                                  <Lock className="w-3 h-3 text-rose-600" /> Date Blocked (0 slots left)
+                                </span>
+                              ) : returningClientBookedSlots.length >= ALL_STANDARD_TIME_SLOTS.length ? (
+                                <span className="inline-flex items-center gap-1 text-red-600 font-bold bg-red-50 px-2 py-0.5 rounded-full border border-red-200 text-xs">
+                                  <Lock className="w-3 h-3" /> Fully Booked (0 slots left)
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center gap-1 text-emerald-700 font-bold bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200 text-xs">
+                                  <Check className="w-3 h-3" /> {ALL_STANDARD_TIME_SLOTS.length - returningClientBookedSlots.length} Open Slot(s) in DB
+                                </span>
+                              )
+                            )}
+                          </div>
+                          <input 
+                            type="date" 
+                            value={returningClientData.preferredDate}
+                            onChange={e => setReturningClientData({ ...returningClientData, preferredDate: e.target.value })}
+                            className="w-full p-3 bg-neutral-50 border border-neutral-200 rounded-xl text-sm focus:ring-2 focus:ring-brand-coral/20 focus:border-brand-coral outline-none text-brand-muted"
+                          />
+                        </div>
+                      </div>
+
+                      {/* SECTION 4: CONSENT & SUBMIT */}
+                      <div className="bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-8 border border-neutral-200/50 shadow-sm space-y-6 text-left">
+                        <h3 className="text-lg font-bold text-brand-dark flex items-center gap-2 border-b border-neutral-100 pb-3">
+                          <ShieldCheck className="w-5 h-5 text-brand-coral" />
+                          4. Consent &amp; Submit
+                        </h3>
+
+                        <label className="flex items-start gap-3 cursor-pointer p-4 rounded-2xl bg-neutral-50 border border-neutral-200 hover:bg-neutral-100/50 transition-colors">
+                          <input 
+                            type="checkbox"
+                            required
+                            checked={returningClientData.consentUnderstand}
+                            onChange={e => setReturningClientData({ ...returningClientData, consentUnderstand: e.target.checked })}
+                            className="text-brand-coral focus:ring-brand-coral shrink-0 mt-0.5 rounded"
+                          />
+                          <p className="text-xs text-brand-dark font-semibold leading-relaxed">
+                            I understand that this represents an appointment scheduling request only, and is not finalized nor confirmed until I receive formal confirmation from the administration staff at BalanceCare Health Services. <span className="text-brand-coral font-bold">*</span>
+                          </p>
+                        </label>
+
+                        {submissionError && (
+                          <div className="p-4 bg-red-50 border border-red-200 rounded-2xl text-red-700 text-xs font-semibold leading-relaxed">
+                            {submissionError}
+                          </div>
+                        )}
+
+                        <div className="pt-4 flex justify-end">
+                          <button
+                            type="submit"
+                            disabled={isSubmitting}
+                            className={`bg-gradient-to-r from-brand-green to-brand-blue hover:from-brand-greenHover hover:to-brand-blueHover text-white font-bold py-4 px-10 rounded-full text-xs shadow-md shadow-brand-blue/10 hover:shadow-brand-blue/20 transition-all flex items-center gap-2 cursor-pointer ${isSubmitting ? 'opacity-70 cursor-not-allowed' : ''}`}
+                          >
+                            {isSubmitting ? (
+                              <>
+                                <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                                </svg>
+                                Submitting Request...
+                              </>
+                            ) : (
+                              <>Submit Returning Request <ArrowRight className="w-4 h-4" /></>
+                            )}
+                          </button>
+                        </div>
+                      </div>
+                    </form>
+                  )}
+                </div>
+              )}
+            </AnimatePresence>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto bg-brand-dark/70 backdrop-blur-md flex items-center justify-center p-2 sm:p-4">
