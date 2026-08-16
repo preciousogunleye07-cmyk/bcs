@@ -628,7 +628,14 @@ export default function AppointmentRequestForm({
         <div className="max-w-4xl w-full mb-6 flex items-center justify-between">
           <a
             href="/"
-            className="inline-flex items-center gap-2 text-sm font-bold text-brand-dark hover:text-brand-coral transition-colors bg-white/80 backdrop-blur-sm px-4 py-2 rounded-full border border-neutral-200 shadow-xs"
+            onClick={(e) => {
+              e.preventDefault();
+              if (typeof window !== 'undefined') {
+                window.history.pushState({}, '', '/');
+                window.dispatchEvent(new PopStateEvent('popstate'));
+              }
+            }}
+            className="inline-flex items-center gap-2 text-sm font-bold text-brand-dark hover:text-brand-coral transition-colors bg-white/80 backdrop-blur-sm px-4 py-2 rounded-full border border-neutral-200 shadow-xs cursor-pointer"
           >
             ← Return to Home
           </a>

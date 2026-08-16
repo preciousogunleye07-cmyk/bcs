@@ -22,20 +22,76 @@ export default function App() {
     }
     return '/';
   });
+  const [currentHash, setCurrentHash] = useState<string>(() => {
+    if (typeof window !== 'undefined') {
+      return window.location.hash;
+    }
+    return '';
+  });
+  const [currentSearch, setCurrentSearch] = useState<string>(() => {
+    if (typeof window !== 'undefined') {
+      return window.location.search;
+    }
+    return '';
+  });
   const [currentView, setCurrentView] = useState<'home' | 'what-we-do'>('home');
   const [isRequestModalOpen, setIsRequestModalOpen] = useState(false);
 
-  // Synchronize browser history / popstate
+  // Synchronize browser history / popstate and hashchange
   useEffect(() => {
-    const handlePopState = () => {
-      setCurrentPath(window.location.pathname);
+    const handleLocationChange = () => {
+      if (typeof window !== 'undefined') {
+        setCurrentPath(window.location.pathname);
+        setCurrentHash(window.location.hash);
+        setCurrentSearch(window.location.search);
+        
+        // Parse service from search params if present (e.g. ?service=Depression%20Care)
+        const params = new URLSearchParams(window.location.search);
+        const serviceParam = params.get('service');
+        if (serviceParam) {
+          setPreselectedService(serviceParam);
+        }
+      }
     };
-    window.addEventListener('popstate', handlePopState);
-    return () => window.removeEventListener('popstate', handlePopState);
+    window.addEventListener('popstate', handleLocationChange);
+    window.addEventListener('hashchange', handleLocationChange);
+    return () => {
+      window.removeEventListener('popstate', handleLocationChange);
+      window.removeEventListener('hashchange', handleLocationChange);
+    };
   }, []);
 
-  // Check if current route is /request-appointment or /request-appointment/
-  const isRequestAppointmentPage = currentPath.toLowerCase().startsWith('/request-appointment');
+  // Check if current route is any variation of /request-appoint, /request-appointment, /appointment, etc.
+  const isRequestAppointmentPage = (() => {
+    const p = (currentPath || '').toLowerCase().replace(/\/+$/, '');
+    const h = (currentHash || '').toLowerCase();
+    const s = (currentSearch || '').toLowerCase();
+
+    return (
+      p === '/request-appoint' ||
+      p === '/request-appointment' ||
+      p === '/request-appointments' ||
+      p === '/request-an-appointment' ||
+      p === '/request' ||
+      p === '/appointment' ||
+      p === '/appointments' ||
+      p === '/book' ||
+      p === '/book-appointment' ||
+      p === '/schedule' ||
+      p === '/schedule-appointment' ||
+      p.includes('request-appoint') ||
+      p.includes('request-appointment') ||
+      p.startsWith('/appointment') ||
+      p.startsWith('/book-appointment') ||
+      p.startsWith('/schedule') ||
+      h.includes('request-appoint') ||
+      h.includes('request-appointment') ||
+      h.includes('appointment') ||
+      h.includes('schedule') ||
+      s.includes('request-appoint') ||
+      s.includes('appointment')
+    );
+  })();
 
   const handleShareClick = () => {
     navigator.clipboard.writeText(window.location.href);
