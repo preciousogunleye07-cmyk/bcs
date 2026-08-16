@@ -5,7 +5,6 @@ import {
   Clock, Heart, ShieldCheck, Mail, Phone, FileText, ChevronRight,
   ChevronLeft, AlertCircle, ArrowRight, ClipboardCheck
 } from 'lucide-react';
-import { createNylasAppointment } from '../lib/nylas';
 
 interface AppointmentRequestFormProps {
   isOpen: boolean;
@@ -104,63 +103,6 @@ export default function AppointmentRequestForm({ isOpen, onClose, preselectedSer
     consentUnderstand: false
   });
 
-  // Helper for quick demo/testing data populating
-  const handleAutoFillDemoData = () => {
-    const todayStr = new Date().toISOString().split('T')[0];
-    setNewClientData({
-      fullName: 'Jordan Morgan',
-      dob: '1992-05-14',
-      age: '34',
-      gender: 'Female',
-      parentGuardian: '',
-      relationshipToClient: '',
-      phone: '(410) 555-0198',
-      email: 'jordan.morgan.test@example.com',
-      homeAddress: '10420 Little Patuxent Pkwy, Columbia, MD 21044',
-      reasons: ['Depression', 'Anxiety', 'Medication Management'],
-      otherReason: '',
-      concernsDescription: 'Seeking routine psychiatric consultation and medication management evaluation.',
-      paymentMethod: 'Insurance',
-      insuranceCompany: 'CareFirst BlueCross BlueShield',
-      memberId: 'CFB-987654321',
-      groupNumber: 'GRP-10293',
-      policyHolder: 'Jordan Morgan',
-      policyHolderDob: '1992-05-14',
-      relationshipToPolicyHolder: 'Self',
-      selfPayAcknowledge: false,
-      location: 'Columbia, MD - Office',
-      preferredDays: ['Monday', 'Wednesday'],
-      preferredTimes: ['Morning', 'Afternoon'],
-      preferredDate: todayStr,
-      consentUnderstand: true
-    });
-
-    setReturningClientData({
-      fullName: 'Jordan Morgan',
-      dob: '1992-05-14',
-      phone: '(410) 555-0198',
-      email: 'jordan.morgan.test@example.com',
-      providerName: 'Dr. Sarah Jenkins, PMHNP-BC',
-      lastAppointmentDate: '2026-06-15',
-      paymentChanges: 'No Changes',
-      insuranceCompany: 'CareFirst BlueCross BlueShield',
-      memberId: 'CFB-987654321',
-      groupNumber: 'GRP-10293',
-      policyHolder: 'Jordan Morgan',
-      reasons: ['Routine Medication Review / Refill', 'Follow-up Evaluation'],
-      otherReason: '',
-      location: 'Columbia, MD - Office',
-      preferredDays: ['Tuesday', 'Thursday'],
-      preferredTimes: ['Afternoon'],
-      preferredDate: todayStr,
-      changes: ['No Changes'],
-      changesExplanation: 'No significant clinical or personal status changes since last session.',
-      currentConcerns: 'Maintaining steady progress with current care plan.',
-      reminderMethod: 'Text Message',
-      consentUnderstand: true
-    });
-  };
-
   // Automatically pre-check corresponding checkboxes if there's a preselected service
   React.useEffect(() => {
     if (isOpen && preselectedService) {
@@ -250,18 +192,6 @@ export default function AppointmentRequestForm({ isOpen, onClose, preselectedSer
         setRequestNumber(num);
         setFormTypeSubmitted('new-client');
         setIsSubmitted(true);
-
-        // Sync with Nylas Calendar Engine
-        if (newClientData.preferredDate) {
-          createNylasAppointment({
-            title: `BalanceCare New Client Intake: ${newClientData.fullName}`,
-            description: `BalanceCare Intake Appointment Ticket ${num}\nPhone: ${newClientData.phone}\nService: ${newClientData.reasons.join(', ')}`,
-            startTime: newClientData.preferredDate + 'T09:00:00Z',
-            endTime: newClientData.preferredDate + 'T10:00:00Z',
-            participantName: newClientData.fullName,
-            participantEmail: newClientData.email
-          }).catch(console.error);
-        }
       } else {
         const errorData = await response.json();
         setSubmissionError(errorData.error || "An error occurred while submitting. Please try again.");
@@ -322,18 +252,6 @@ export default function AppointmentRequestForm({ isOpen, onClose, preselectedSer
         setRequestNumber(num);
         setFormTypeSubmitted('returning-client');
         setIsSubmitted(true);
-
-        // Sync with Nylas Calendar Engine
-        if (returningClientData.preferredDate) {
-          createNylasAppointment({
-            title: `BalanceCare Returning Follow-Up: ${returningClientData.fullName}`,
-            description: `BalanceCare Follow-Up Appointment Ticket ${num}\nPhone: ${returningClientData.phone}\nProvider: ${returningClientData.providerName}`,
-            startTime: returningClientData.preferredDate + 'T10:00:00Z',
-            endTime: returningClientData.preferredDate + 'T11:00:00Z',
-            participantName: returningClientData.fullName,
-            participantEmail: returningClientData.email
-          }).catch(console.error);
-        }
       } else {
         const errorData = await response.json();
         setSubmissionError(errorData.error || "An error occurred while submitting. Please try again.");
@@ -585,41 +503,13 @@ export default function AppointmentRequestForm({ isOpen, onClose, preselectedSer
           <div className="absolute top-0 right-0 w-64 h-64 rounded-full bg-brand-blue/10 blur-3xl pointer-events-none"></div>
           <div className="absolute bottom-0 left-0 w-64 h-64 rounded-full bg-brand-green/5 blur-2xl pointer-events-none"></div>
 
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div>
-              <span className="text-[10px] font-bold uppercase tracking-widest text-brand-coral block mb-1">
-                Care Intake Office
-              </span>
-              <h2 className="text-xl sm:text-3xl font-extrabold tracking-tight">Appointment Request Portal</h2>
-              <p className="text-gray-400 text-xs sm:text-sm mt-1 max-w-xl hidden sm:block">
-                Please fill out our official clinic form. Our administrative staff will review your request and reach out to confirm details.
-              </p>
-            </div>
-
-            {/* Action Buttons: Auto-Fill Test Data & Cal.com */}
-            <div className="flex flex-wrap items-center gap-2 shrink-0 self-start sm:self-auto">
-              <button
-                type="button"
-                onClick={handleAutoFillDemoData}
-                className="px-3.5 py-2.5 bg-white/10 hover:bg-white/20 text-white text-xs font-bold rounded-xl border border-white/20 transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-sm"
-                title="Fill form with sample data for instant testing"
-              >
-                <Sparkles className="w-3.5 h-3.5 text-brand-coral" />
-                <span>⚡ Auto-Fill Demo Data</span>
-              </button>
-
-              <button
-                type="button"
-                data-cal-link="balancecare-health-services-u53h5o/appointment-request-portal"
-                data-cal-namespace="appointment-request-portal"
-                data-cal-config='{"layout":"month_view","useSlotsViewOnSmallScreen":"true"}'
-                className="px-4 py-2.5 bg-gradient-to-r from-brand-coral to-brand-coralHover text-white text-xs font-bold rounded-xl shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 shrink-0 cursor-pointer border border-white/20"
-              >
-                <Calendar className="w-4 h-4 text-white" />
-                <span>Live Cal.com Scheduler</span>
-              </button>
-            </div>
-          </div>
+          <span className="text-[10px] font-bold uppercase tracking-widest text-brand-coral block mb-1">
+            Care Intake Office
+          </span>
+          <h2 className="text-xl sm:text-3xl font-extrabold tracking-tight">Appointment Request Portal</h2>
+          <p className="text-gray-400 text-xs sm:text-sm mt-1 max-w-xl hidden sm:block">
+            Please fill out our official clinic form. Our administrative staff will review your request and reach out to confirm details.
+          </p>
 
           {/* Toggle Tabs */}
           {!isSubmitted && (
@@ -716,31 +606,10 @@ export default function AppointmentRequestForm({ isOpen, onClose, preselectedSer
                 </div>
 
                 <p className="text-xs text-brand-muted leading-relaxed">
-                  Our care coordinators are currently matching your request with our provider calendars. An advisor will contact you shortly via <strong>phone</strong> or <strong>email</strong>. You can also pick an exact time slot on our Cal.com portal below.
+                  Our care coordinators are currently matching your request with our provider calendars. An advisor will contact you shortly via <strong>phone</strong> or <strong>email</strong>. This submission represents a scheduling request and is finalized only upon confirmation from BCHS staff.
                 </p>
 
-                {/* Cal.com Direct Link on Success */}
-                <div className="p-4 bg-gradient-to-r from-brand-blue/5 to-brand-coral/5 border border-brand-blue/20 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-3 text-left">
-                  <div className="flex items-center gap-2.5">
-                    <Calendar className="w-5 h-5 text-brand-blue shrink-0" />
-                    <div>
-                      <h4 className="text-xs font-bold text-brand-dark">Want to lock in your time slot now?</h4>
-                      <p className="text-[11px] text-brand-muted">Select an exact open slot on our Cal.com calendar portal.</p>
-                    </div>
-                  </div>
-                  <button
-                    type="button"
-                    data-cal-link="balancecare-health-services-u53h5o/appointment-request-portal"
-                    data-cal-namespace="appointment-request-portal"
-                    data-cal-config='{"layout":"month_view","useSlotsViewOnSmallScreen":"true"}'
-                    className="px-4 py-2 bg-gradient-to-r from-brand-green to-brand-blue hover:from-brand-greenHover hover:to-brand-blueHover text-white text-xs font-bold rounded-xl shadow-sm hover:shadow transition-all flex items-center gap-1.5 shrink-0 cursor-pointer"
-                  >
-                    <Sparkles className="w-3.5 h-3.5 text-brand-coral" />
-                    <span>Open Cal.com Calendar</span>
-                  </button>
-                </div>
-
-                <div className="flex flex-wrap gap-3 justify-center pt-2">
+                <div className="flex gap-3 justify-center pt-4">
                   <button
                     onClick={resetForms}
                     className="px-6 py-3 rounded-full border border-neutral-200 hover:bg-neutral-50 text-brand-muted text-xs font-bold transition-all cursor-pointer"
@@ -1201,43 +1070,10 @@ export default function AppointmentRequestForm({ isOpen, onClose, preselectedSer
 
                     {/* SECTION 4: PREFERRED APPOINTMENT SETTINGS */}
                     <div className="bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-8 border border-neutral-200/50 shadow-sm space-y-6 text-left">
-                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-neutral-100 pb-3">
-                        <h3 className="text-lg font-bold text-brand-dark flex items-center gap-2">
-                          <MapPin className="w-5 h-5 text-brand-coral" />
-                          4. Preferred Appointment Settings
-                        </h3>
-                        <div className="flex items-center gap-2">
-                          <span className="text-[11px] font-semibold text-brand-muted">Cal.com Portal &amp; Nylas v3 Enabled</span>
-                        </div>
-                      </div>
-
-                      {/* Nylas API & Cal.com Live Integration Banner */}
-                      <div className="p-4 bg-gradient-to-r from-brand-blue/5 via-brand-coral/5 to-brand-green/5 border border-brand-blue/20 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-xl bg-brand-blue/10 flex items-center justify-center text-brand-blue shrink-0">
-                            <Calendar className="w-5 h-5" />
-                          </div>
-                          <div>
-                            <h4 className="text-xs font-bold text-brand-dark flex items-center gap-1.5">
-                              <span>Nylas Calendar API v3 Active</span>
-                              <span className="text-[9px] bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full font-extrabold uppercase tracking-wider">API Key Connected</span>
-                            </h4>
-                            <p className="text-[11px] text-brand-muted mt-0.5">
-                              Your appointment request auto-syncs with Nylas calendar scheduling backend API.
-                            </p>
-                          </div>
-                        </div>
-                        <button
-                          type="button"
-                          data-cal-link="balancecare-health-services-u53h5o/appointment-request-portal"
-                          data-cal-namespace="appointment-request-portal"
-                          data-cal-config='{"layout":"month_view","useSlotsViewOnSmallScreen":"true"}'
-                          className="px-4 py-2.5 bg-brand-dark hover:bg-black text-white text-xs font-bold rounded-xl shadow-sm hover:shadow-md transition-all flex items-center gap-2 shrink-0 cursor-pointer"
-                        >
-                          <Sparkles className="w-3.5 h-3.5 text-brand-coral" />
-                          <span>Select Live Slot</span>
-                        </button>
-                      </div>
+                      <h3 className="text-lg font-bold text-brand-dark flex items-center gap-2 border-b border-neutral-100 pb-3">
+                        <MapPin className="w-5 h-5 text-brand-coral" />
+                        4. Preferred Appointment
+                      </h3>
                       
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
@@ -1647,41 +1483,10 @@ export default function AppointmentRequestForm({ isOpen, onClose, preselectedSer
 
                     {/* SECTION 5: APPOINTMENT PREFERENCE */}
                     <div className="bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-8 border border-neutral-200/50 shadow-sm space-y-6 text-left">
-                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-neutral-100 pb-3">
-                        <h3 className="text-lg font-bold text-brand-dark flex items-center gap-2">
-                          <MapPin className="w-5 h-5 text-brand-coral" />
-                          5. Appointment Preferences &amp; Cal.com Portal
-                        </h3>
-                        <span className="text-[11px] font-semibold text-brand-muted">Live Calendar Connected</span>
-                      </div>
-
-                      {/* Cal.com Live Calendar Embed Banner */}
-                      <div className="p-4 bg-gradient-to-r from-brand-blue/5 via-brand-coral/5 to-brand-green/5 border border-brand-blue/20 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-xl bg-brand-blue/10 flex items-center justify-center text-brand-blue shrink-0">
-                            <Calendar className="w-5 h-5" />
-                          </div>
-                          <div>
-                            <h4 className="text-xs font-bold text-brand-dark flex items-center gap-1.5">
-                              <span>Follow-Up Appointment via Cal.com</span>
-                              <span className="text-[9px] bg-brand-coral/10 text-brand-coral px-2 py-0.5 rounded-full font-extrabold uppercase tracking-wider">Instant Slot</span>
-                            </h4>
-                            <p className="text-[11px] text-brand-muted mt-0.5">
-                              Reserve an exact follow-up slot with your provider on our Cal.com calendar portal.
-                            </p>
-                          </div>
-                        </div>
-                        <button
-                          type="button"
-                          data-cal-link="balancecare-health-services-u53h5o/appointment-request-portal"
-                          data-cal-namespace="appointment-request-portal"
-                          data-cal-config='{"layout":"month_view","useSlotsViewOnSmallScreen":"true"}'
-                          className="px-4 py-2.5 bg-brand-dark hover:bg-black text-white text-xs font-bold rounded-xl shadow-sm hover:shadow-md transition-all flex items-center gap-2 shrink-0 cursor-pointer"
-                        >
-                          <Sparkles className="w-3.5 h-3.5 text-brand-coral" />
-                          <span>Open Cal.com Portal</span>
-                        </button>
-                      </div>
+                      <h3 className="text-lg font-bold text-brand-dark flex items-center gap-2 border-b border-neutral-100 pb-3">
+                        <MapPin className="w-5 h-5 text-brand-coral" />
+                        5. Appointment Preferences
+                      </h3>
 
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
