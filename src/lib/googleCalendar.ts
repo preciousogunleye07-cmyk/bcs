@@ -1,78 +1,20 @@
-import { initializeApp, getApp, getApps } from 'firebase/app';
-import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, User } from 'firebase/auth';
-import firebaseConfig from '../../firebase-applet-config.json';
+// Google Calendar helper utilities without Firebase dependencies
 
-// Initialize Firebase once
-const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
-export const auth = getAuth(app);
-
-const provider = new GoogleAuthProvider();
-// Request Google Calendar events write permission
-provider.addScope('https://www.googleapis.com/auth/calendar.events');
-
-let isSigningIn = false;
-let cachedAccessToken: string | null = null;
-
-// Initialize auth state listener
-export const initAuth = (
-  onAuthSuccess?: (user: User, token: string) => void,
-  onAuthFailure?: () => void
-) => {
-  return onAuthStateChanged(auth, async (user: User | null) => {
-    if (user) {
-      if (cachedAccessToken) {
-        if (onAuthSuccess) onAuthSuccess(user, cachedAccessToken);
-      } else if (!isSigningIn) {
-        // In client-side only Firebase popup flow, the token is obtained during signInWithPopup
-        // and is not automatically retrieved on page reload unless we re-auth or store it (which is discouraged for security).
-        // If we don't have it cached, we treat it as unauthenticated for Google Calendar operations.
-        if (onAuthFailure) onAuthFailure();
-      }
-    } else {
-      cachedAccessToken = null;
-      if (onAuthFailure) onAuthFailure();
-    }
-  });
-};
-
-// Google sign-in trigger
-export const googleSignIn = async (): Promise<{ user: User; accessToken: string } | null> => {
-  try {
-    isSigningIn = true;
-    const result = await signInWithPopup(auth, provider);
-    const credential = GoogleAuthProvider.credentialFromResult(result);
-    if (!credential?.accessToken) {
-      throw new Error('Failed to get access token from Firebase Auth');
-    }
-
-    cachedAccessToken = credential.accessToken;
-    return { user: result.user, accessToken: cachedAccessToken };
-  } catch (error: any) {
-    console.error('Sign in error:', error);
-    throw error;
-  } finally {
-    isSigningIn = false;
-  }
-};
-
-export const getAccessToken = (): string | null => {
-  return cachedAccessToken;
-};
-
-export const logout = async () => {
-  await auth.signOut();
-  cachedAccessToken = null;
-};
-
-// Helper to convert timeSlot string "09:00 AM - 10:00 AM" to 24-hour ISO strings
-export function parseDateTimeRange(date: string, timeSlot: string): { startISO: string; endISO: string } {
-  // Default values in case parsing fails
+// Helper to convert date and timeSlot string "09:00 AM - 10:00 AM" to 24-hour ISO strings
+export function parseDateTimeRange(date: string, timeSlot: string): { startISO: string; endISO: string; startFormatted: string; endFormatted: string } {
   const defaultStart = `${date}T09:00:00`;
   const defaultEnd = `${date}T10:00:00`;
 
   try {
     const parts = timeSlot.split('-');
-    if (parts.length !== 2) return { startISO: defaultStart, endISO: defaultEnd };
+    if (parts.length !== 2) {
+      return { 
+        startISO: defaultStart, 
+        endISO: defaultEnd,
+        startFormatted: `${date.replace(/-/g, '')}T090000`,
+        endFormatted: `${date.replace(/-/g, '')}T100000`
+      };
+    }
 
     const parseTimeTo24h = (timeStr: string): string => {
       const cleaned = timeStr.trim();
@@ -86,61 +28,82 @@ export function parseDateTimeRange(date: string, timeSlot: string): { startISO: 
       return `${h.toString().padStart(2, '0')}:${minutes}`;
     };
 
-    const startISO = `${date}T${parseTimeTo24h(parts[0])}:00`;
-    const endISO = `${date}T${parseTimeTo24h(parts[1])}:00`;
+    const startH = parseTimeTo24h(parts[0]);
+    const endH = parseTimeTo24h(parts[1]);
 
-    return { startISO, endISO };
+    const startISO = `${date}T${startH}:00`;
+    const endISO = `${date}T${endH}:00`;
+
+    const startFormatted = `${date.replace(/-/g, '')}T${startH.replace(':', '')}00`;
+    const endFormatted = `${date.replace(/-/g, '')}T${endH.replace(':', '')}00`;
+
+    return { startISO, endISO, startFormatted, endFormatted };
   } catch (err) {
     console.error('Error parsing date/time range:', err);
-    return { startISO: defaultStart, endISO: defaultEnd };
+    return { 
+      startISO: defaultStart, 
+      endISO: defaultEnd,
+      startFormatted: `${date.replace(/-/g, '')}T090000`,
+      endFormatted: `${date.replace(/-/g, '')}T100000`
+    };
   }
 }
 
-interface CalendarEventParams {
+export interface CalendarEventParams {
   summary: string;
   description: string;
   date: string;
   timeSlot: string;
   expertName: string;
+  location?: string;
 }
 
-// Create event in Google Calendar
-export const createCalendarEvent = async (
-  accessToken: string,
-  params: CalendarEventParams
-): Promise<any> => {
-  const { startISO, endISO } = parseDateTimeRange(params.date, params.timeSlot);
-
-  const eventBody = {
-    summary: params.summary,
-    description: params.description,
-    start: {
-      dateTime: startISO,
-      timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'America/New_York'
-    },
-    end: {
-      dateTime: endISO,
-      timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'America/New_York'
-    },
-    reminders: {
-      useDefault: true
-    }
-  };
-
-  const response = await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events', {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${accessToken}`,
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify(eventBody)
+/**
+ * Generate a direct "Add to Google Calendar" web link
+ */
+export function getGoogleCalendarUrl(params: CalendarEventParams): string {
+  const { startFormatted, endFormatted } = parseDateTimeRange(params.date, params.timeSlot);
+  const location = params.location || 'BalanceCare Health & Wellness Clinic (Columbia, MD / Washington, DC)';
+  
+  const baseUrl = 'https://calendar.google.com/calendar/render?action=TEMPLATE';
+  const urlParams = new URLSearchParams({
+    text: params.summary,
+    dates: `${startFormatted}/${endFormatted}`,
+    details: params.description,
+    location: location,
   });
 
-  if (!response.ok) {
-    const errText = await response.text();
-    console.error('Google Calendar API Error:', errText);
-    throw new Error(`Failed to create calendar event: ${response.statusText}`);
-  }
+  return `${baseUrl}&${urlParams.toString()}`;
+}
 
-  return response.json();
-};
+/**
+ * Generate and trigger download of an .ics iCalendar file for Outlook, Apple Calendar, and Google Calendar
+ */
+export function downloadIcsFile(params: CalendarEventParams) {
+  const { startFormatted, endFormatted } = parseDateTimeRange(params.date, params.timeSlot);
+  const location = params.location || 'BalanceCare Health & Wellness Clinic';
+
+  const icsContent = [
+    'BEGIN:VCALENDAR',
+    'VERSION:2.0',
+    'PRODID:-//BalanceCare Health Services//Appointment Schedule//EN',
+    'CALSCALE:GREGORIAN',
+    'BEGIN:VEVENT',
+    `SUMMARY:${params.summary.replace(/,/g, '\\,')}`,
+    `DESCRIPTION:${params.description.replace(/\n/g, '\\n')}`,
+    `LOCATION:${location.replace(/,/g, '\\,')}`,
+    `DTSTART:${startFormatted}`,
+    `DTEND:${endFormatted}`,
+    'STATUS:CONFIRMED',
+    'END:VEVENT',
+    'END:VCALENDAR'
+  ].join('\r\n');
+
+  const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8' });
+  const link = document.createElement('a');
+  link.href = window.URL.createObjectURL(blob);
+  link.setAttribute('download', `BalanceCare_Appointment_${params.date}.ics`);
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+}

@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   X, Check, Sparkles, User, Calendar, CreditCard, MapPin, 
   Clock, Heart, ShieldCheck, Mail, Phone, FileText, ChevronRight,
-  ChevronLeft, AlertCircle, ArrowRight, ClipboardCheck
+  ChevronLeft, AlertCircle, ArrowRight, ClipboardCheck, Lock, Loader2
 } from 'lucide-react';
+import { saveIntakeToSupabase, fetchBookedSlotsForDate, isDateAdministrativelyBlocked, ALL_STANDARD_TIME_SLOTS } from '../lib/supabase';
 
 interface AppointmentRequestFormProps {
   isOpen: boolean;
@@ -21,6 +22,12 @@ export default function AppointmentRequestForm({ isOpen, onClose, preselectedSer
   const [requestNumber, setRequestNumber] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submissionError, setSubmissionError] = useState<string | null>(null);
+
+  // Live booked slot states for intake forms
+  const [newClientBookedSlots, setNewClientBookedSlots] = useState<string[]>([]);
+  const [isLoadingNewClientSlots, setIsLoadingNewClientSlots] = useState(false);
+  const [returningClientBookedSlots, setReturningClientBookedSlots] = useState<string[]>([]);
+  const [isLoadingReturningSlots, setIsLoadingReturningSlots] = useState(false);
 
   // 1. New Client Form State
   const [newClientData, setNewClientData] = useState({
@@ -139,13 +146,65 @@ export default function AppointmentRequestForm({ isOpen, onClose, preselectedSer
     }
   }, [isOpen, preselectedService]);
 
-  // Form step indicators (if we want step wizard, but since the form is a standard paper structure, we can segment it into logical scrollable sections with tabs, giving a clean and high-fidelity form feel)
+  // Fetch booked slots for New Client chosen date
+  useEffect(() => {
+    let isCurrent = true;
+    if (!newClientData.preferredDate) {
+      setNewClientBookedSlots([]);
+      setIsLoadingNewClientSlots(false);
+      return;
+    }
+    setIsLoadingNewClientSlots(true);
+    fetchBookedSlotsForDate(newClientData.preferredDate).then(slots => {
+      if (isCurrent) {
+        setNewClientBookedSlots(slots);
+        setIsLoadingNewClientSlots(false);
+      }
+    }).catch(() => {
+      if (isCurrent) setIsLoadingNewClientSlots(false);
+    });
+    return () => { isCurrent = false; };
+  }, [newClientData.preferredDate]);
+
+  // Fetch booked slots for Returning Client chosen date
+  useEffect(() => {
+    let isCurrent = true;
+    if (!returningClientData.preferredDate) {
+      setReturningClientBookedSlots([]);
+      setIsLoadingReturningSlots(false);
+      return;
+    }
+    setIsLoadingReturningSlots(true);
+    fetchBookedSlotsForDate(returningClientData.preferredDate).then(slots => {
+      if (isCurrent) {
+        setReturningClientBookedSlots(slots);
+        setIsLoadingReturningSlots(false);
+      }
+    }).catch(() => {
+      if (isCurrent) setIsLoadingReturningSlots(false);
+    });
+    return () => { isCurrent = false; };
+  }, [returningClientData.preferredDate]);
   
   const handleNewClientSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newClientData.consentUnderstand) {
       return;
     }
+
+    // Check if the selected date is blocked or completely booked
+    if (newClientData.preferredDate) {
+      const blockCheck = isDateAdministrativelyBlocked(newClientData.preferredDate);
+      if (blockCheck.blocked) {
+        setSubmissionError(blockCheck.reason || "This date is administratively blocked from bookings. Please pick an alternate date.");
+        return;
+      }
+      if (newClientBookedSlots.length >= ALL_STANDARD_TIME_SLOTS.length) {
+        setSubmissionError("All appointment slots on your chosen Target Booking Date have already been reserved. Please pick another date.");
+        return;
+      }
+    }
+
     setIsSubmitting(true);
     setSubmissionError(null);
     const num = 'BC-INT-' + Math.floor(Math.random() * 90000 + 10000);
@@ -179,6 +238,40 @@ export default function AppointmentRequestForm({ isOpen, onClose, preselectedSer
     };
 
     try {
+      // 1. Save to Supabase
+      const supabaseResult = await saveIntakeToSupabase({
+        submissionType: 'new-client',
+        ticketNumber: num,
+        fullName: newClientData.fullName,
+        dob: newClientData.dob,
+        age: newClientData.age,
+        gender: newClientData.gender,
+        parentGuardian: newClientData.parentGuardian,
+        relationshipToClient: newClientData.relationshipToClient,
+        phone: newClientData.phone,
+        email: newClientData.email,
+        homeAddress: newClientData.homeAddress,
+        reasons: newClientData.reasons,
+        otherReason: newClientData.otherReason,
+        concernsDescription: newClientData.concernsDescription,
+        paymentMethod: newClientData.paymentMethod,
+        insuranceCompany: newClientData.insuranceCompany,
+        memberId: newClientData.memberId,
+        groupNumber: newClientData.groupNumber,
+        policyHolder: newClientData.policyHolder,
+        policyHolderDob: newClientData.policyHolderDob,
+        relationshipToPolicyHolder: newClientData.relationshipToPolicyHolder,
+        preferredLocation: newClientData.location,
+        preferredDays: newClientData.preferredDays,
+        preferredTimes: newClientData.preferredTimes,
+        preferredDate: newClientData.preferredDate
+      });
+
+      if (!supabaseResult.success && supabaseResult.error) {
+        console.warn('[Supabase Sync Notice]:', supabaseResult.error);
+      }
+
+      // 2. Transmit through Formspree intake channel
       const response = await fetch("https://formspree.io/f/mzdnrlwp", {
         method: "POST",
         headers: {
@@ -208,6 +301,20 @@ export default function AppointmentRequestForm({ isOpen, onClose, preselectedSer
     if (!returningClientData.consentUnderstand) {
       return;
     }
+
+    // Check if the selected date is blocked or completely booked
+    if (returningClientData.preferredDate) {
+      const blockCheck = isDateAdministrativelyBlocked(returningClientData.preferredDate);
+      if (blockCheck.blocked) {
+        setSubmissionError(blockCheck.reason || "This date is administratively blocked from bookings. Please pick an alternate date.");
+        return;
+      }
+      if (returningClientBookedSlots.length >= ALL_STANDARD_TIME_SLOTS.length) {
+        setSubmissionError("All appointment slots on your chosen Target Booking Date have already been reserved. Please pick another date.");
+        return;
+      }
+    }
+
     setIsSubmitting(true);
     setSubmissionError(null);
     const num = 'BC-RET-' + Math.floor(Math.random() * 90000 + 10000);
@@ -239,6 +346,35 @@ export default function AppointmentRequestForm({ isOpen, onClose, preselectedSer
     };
 
     try {
+      // 1. Save to Supabase
+      const supabaseResult = await saveIntakeToSupabase({
+        submissionType: 'returning-client',
+        ticketNumber: num,
+        fullName: returningClientData.fullName,
+        dob: returningClientData.dob,
+        phone: returningClientData.phone,
+        email: returningClientData.email,
+        preferredPractitioner: returningClientData.providerName,
+        insuranceCompany: returningClientData.insuranceCompany,
+        memberId: returningClientData.memberId,
+        groupNumber: returningClientData.groupNumber,
+        policyHolder: returningClientData.policyHolder,
+        reasons: returningClientData.reasons,
+        otherReason: returningClientData.otherReason,
+        preferredLocation: returningClientData.location,
+        preferredDays: returningClientData.preferredDays,
+        preferredTimes: returningClientData.preferredTimes,
+        preferredDate: returningClientData.preferredDate,
+        concernsDescription: returningClientData.currentConcerns,
+        reminderMethod: returningClientData.reminderMethod,
+        paymentMethod: returningClientData.paymentChanges || 'Insurance/Existing'
+      });
+
+      if (!supabaseResult.success && supabaseResult.error) {
+        console.warn('[Supabase Sync Notice]:', supabaseResult.error);
+      }
+
+      // 2. Transmit through Formspree intake channel
       const response = await fetch("https://formspree.io/f/mzdnrlwp", {
         method: "POST",
         headers: {
@@ -1131,14 +1267,55 @@ export default function AppointmentRequestForm({ isOpen, onClose, preselectedSer
                         </div>
 
                         <div>
-                          <label className="block text-xs font-bold text-brand-dark mb-1.5">Target Booking Date <span className="text-brand-coral">*</span></label>
+                          <div className="flex items-center justify-between mb-1.5">
+                            <label className="block text-xs font-bold text-brand-dark">Target Booking Date <span className="text-brand-coral">*</span></label>
+                            {newClientData.preferredDate && (
+                              <span className="text-[11px] font-semibold">
+                                {isLoadingNewClientSlots ? (
+                                  <span className="inline-flex items-center gap-1 text-brand-coral">
+                                    <Loader2 className="w-3 h-3 animate-spin" /> Checking slots...
+                                  </span>
+                                ) : isDateAdministrativelyBlocked(newClientData.preferredDate).blocked ? (
+                                  <span className="inline-flex items-center gap-1 text-rose-700 font-bold bg-rose-50 px-2 py-0.5 rounded-full border border-rose-200">
+                                    <Lock className="w-3 h-3 text-rose-600" /> Date Blocked (0 slots left)
+                                  </span>
+                                ) : newClientBookedSlots.length >= ALL_STANDARD_TIME_SLOTS.length ? (
+                                  <span className="inline-flex items-center gap-1 text-red-600 font-bold bg-red-50 px-2 py-0.5 rounded-full border border-red-200">
+                                    <Lock className="w-3 h-3" /> Fully Booked (0 slots left)
+                                  </span>
+                                ) : (
+                                  <span className="inline-flex items-center gap-1 text-emerald-700 font-bold bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                                    <Sparkles className="w-3 h-3 text-emerald-500" /> {ALL_STANDARD_TIME_SLOTS.length - newClientBookedSlots.length} of {ALL_STANDARD_TIME_SLOTS.length} slots available
+                                  </span>
+                                )}
+                              </span>
+                            )}
+                          </div>
                           <input
                             type="date"
                             required
+                            min={new Date().toISOString().split('T')[0]}
                             value={newClientData.preferredDate}
                             onChange={e => setNewClientData({ ...newClientData, preferredDate: e.target.value })}
                             className="w-full p-3 bg-neutral-50 border border-neutral-200 rounded-xl text-sm focus:ring-2 focus:ring-brand-coral/20 focus:border-brand-coral outline-none text-brand-muted"
                           />
+                          {newClientData.preferredDate && isDateAdministrativelyBlocked(newClientData.preferredDate).blocked && (
+                            <p className="text-[11px] text-rose-700 font-semibold mt-1.5 flex items-center gap-1 bg-rose-50 border border-rose-200 p-2 rounded-lg">
+                              <Lock className="w-3.5 h-3.5 shrink-0 text-rose-600" />
+                              {isDateAdministrativelyBlocked(newClientData.preferredDate).reason || 'This date is administratively blocked. Please pick another date.'}
+                            </p>
+                          )}
+                          {newClientData.preferredDate && !isLoadingNewClientSlots && !isDateAdministrativelyBlocked(newClientData.preferredDate).blocked && newClientBookedSlots.length < ALL_STANDARD_TIME_SLOTS.length && (
+                            <p className="text-[11px] text-emerald-700 mt-1.5 font-medium">
+                              Available on this date: <strong className="font-semibold">{ALL_STANDARD_TIME_SLOTS.filter(s => !newClientBookedSlots.some(b => b.trim().toLowerCase() === s.trim().toLowerCase())).join(', ')}</strong>
+                            </p>
+                          )}
+                          {newClientData.preferredDate && !isDateAdministrativelyBlocked(newClientData.preferredDate).blocked && newClientBookedSlots.length >= ALL_STANDARD_TIME_SLOTS.length && (
+                            <p className="text-[11px] text-red-600 font-semibold mt-1.5 flex items-center gap-1">
+                              <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                              All appointment slots on this date are taken in the database. Please pick another date.
+                            </p>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -1544,14 +1721,55 @@ export default function AppointmentRequestForm({ isOpen, onClose, preselectedSer
                         </div>
 
                         <div>
-                          <label className="block text-xs font-bold text-brand-dark mb-1.5">Target Booking Date <span className="text-brand-coral">*</span></label>
+                          <div className="flex items-center justify-between mb-1.5">
+                            <label className="block text-xs font-bold text-brand-dark">Target Booking Date <span className="text-brand-coral">*</span></label>
+                            {returningClientData.preferredDate && (
+                              <span className="text-[11px] font-semibold">
+                                {isLoadingReturningSlots ? (
+                                  <span className="inline-flex items-center gap-1 text-brand-coral">
+                                    <Loader2 className="w-3 h-3 animate-spin" /> Checking slots...
+                                  </span>
+                                ) : isDateAdministrativelyBlocked(returningClientData.preferredDate).blocked ? (
+                                  <span className="inline-flex items-center gap-1 text-rose-700 font-bold bg-rose-50 px-2 py-0.5 rounded-full border border-rose-200">
+                                    <Lock className="w-3 h-3 text-rose-600" /> Date Blocked (0 slots left)
+                                  </span>
+                                ) : returningClientBookedSlots.length >= ALL_STANDARD_TIME_SLOTS.length ? (
+                                  <span className="inline-flex items-center gap-1 text-red-600 font-bold bg-red-50 px-2 py-0.5 rounded-full border border-red-200">
+                                    <Lock className="w-3 h-3" /> Fully Booked (0 slots left)
+                                  </span>
+                                ) : (
+                                  <span className="inline-flex items-center gap-1 text-emerald-700 font-bold bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                                    <Sparkles className="w-3 h-3 text-emerald-500" /> {ALL_STANDARD_TIME_SLOTS.length - returningClientBookedSlots.length} of {ALL_STANDARD_TIME_SLOTS.length} slots available
+                                  </span>
+                                )}
+                              </span>
+                            )}
+                          </div>
                           <input
                             type="date"
                             required
+                            min={new Date().toISOString().split('T')[0]}
                             value={returningClientData.preferredDate}
                             onChange={e => setReturningClientData({ ...returningClientData, preferredDate: e.target.value })}
                             className="w-full p-3 bg-neutral-50 border border-neutral-200 rounded-xl text-sm focus:ring-2 focus:ring-brand-coral/20 focus:border-brand-coral outline-none text-brand-muted"
                           />
+                          {returningClientData.preferredDate && isDateAdministrativelyBlocked(returningClientData.preferredDate).blocked && (
+                            <p className="text-[11px] text-rose-700 font-semibold mt-1.5 flex items-center gap-1 bg-rose-50 border border-rose-200 p-2 rounded-lg">
+                              <Lock className="w-3.5 h-3.5 shrink-0 text-rose-600" />
+                              {isDateAdministrativelyBlocked(returningClientData.preferredDate).reason || 'This date is administratively blocked. Please pick another date.'}
+                            </p>
+                          )}
+                          {returningClientData.preferredDate && !isLoadingReturningSlots && !isDateAdministrativelyBlocked(returningClientData.preferredDate).blocked && returningClientBookedSlots.length < ALL_STANDARD_TIME_SLOTS.length && (
+                            <p className="text-[11px] text-emerald-700 mt-1.5 font-medium">
+                              Available on this date: <strong className="font-semibold">{ALL_STANDARD_TIME_SLOTS.filter(s => !returningClientBookedSlots.some(b => b.trim().toLowerCase() === s.trim().toLowerCase())).join(', ')}</strong>
+                            </p>
+                          )}
+                          {returningClientData.preferredDate && !isDateAdministrativelyBlocked(returningClientData.preferredDate).blocked && returningClientBookedSlots.length >= ALL_STANDARD_TIME_SLOTS.length && (
+                            <p className="text-[11px] text-red-600 font-semibold mt-1.5 flex items-center gap-1">
+                              <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                              All appointment slots on this date are taken in the database. Please pick another date.
+                            </p>
+                          )}
                         </div>
                       </div>
                     </div>

@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Users, Calendar, ArrowRight, X, Sparkles, Check, CheckCircle2, User, Phone, Mail, Award, Clock, RefreshCw } from 'lucide-react';
+import { Users, Calendar, ArrowRight, X, Sparkles, Check, CheckCircle2, User, Phone, Mail, Award, Clock, Download, ExternalLink, AlertTriangle, Lock, Loader2 } from 'lucide-react';
 import { Expert, AppointmentBooking, ReferralSubmission } from '../types';
-import { googleSignIn, createCalendarEvent, getAccessToken } from '../lib/googleCalendar';
+import { getGoogleCalendarUrl, downloadIcsFile } from '../lib/googleCalendar';
+import { saveAppointmentToSupabase, saveReferralToSupabase, isSupabaseConfigured, fetchBookedSlotsForDate, checkSlotAvailability, isDateAdministrativelyBlocked, ALL_STANDARD_TIME_SLOTS } from '../lib/supabase';
 
 export default function ActionGrid({ 
   preselectedService, 
@@ -31,6 +32,12 @@ export default function ActionGrid({
     notes: ''
   });
   const [bookingSuccessData, setBookingSuccessData] = useState<{ id: string } | null>(null);
+
+  // Slot restriction and live availability states
+  const [bookedSlots, setBookedSlots] = useState<string[]>([]);
+  const [isLoadingSlots, setIsLoadingSlots] = useState<boolean>(false);
+  const [slotConflictError, setSlotConflictError] = useState<string | null>(null);
+  const [isSubmittingBooking, setIsSubmittingBooking] = useState<boolean>(false);
 
   // Google Calendar integration state
   const [syncingCalendar, setSyncingCalendar] = useState(false);
@@ -88,12 +95,57 @@ export default function ActionGrid({
     }
   ];
 
+  // Load booked slots from Supabase whenever date changes
+  useEffect(() => {
+    let isCurrent = true;
+    if (!bookingData.date) {
+      setBookedSlots([]);
+      setIsLoadingSlots(false);
+      return;
+    }
+
+    // Check if the date is administratively blocked
+    const blockCheck = isDateAdministrativelyBlocked(bookingData.date);
+    if (blockCheck.blocked) {
+      setBookedSlots([...ALL_STANDARD_TIME_SLOTS]);
+      setIsLoadingSlots(false);
+      setBookingData(prev => ({ ...prev, timeSlot: '' }));
+      setSlotConflictError(blockCheck.reason || 'This date is administratively blocked. Please choose another date.');
+      return;
+    }
+
+    setIsLoadingSlots(true);
+    setSlotConflictError(null);
+
+    fetchBookedSlotsForDate(bookingData.date).then((slots) => {
+      if (isCurrent) {
+        setBookedSlots(slots);
+        setIsLoadingSlots(false);
+        // If current selected timeSlot is already booked, clear it
+        if (bookingData.timeSlot && slots.some(s => s.trim().toLowerCase() === bookingData.timeSlot.trim().toLowerCase())) {
+          setBookingData(prev => ({ ...prev, timeSlot: '' }));
+          setSlotConflictError(`The time slot "${bookingData.timeSlot}" on this date has already been booked by another client in our database. Please select another time window.`);
+        }
+      }
+    }).catch(() => {
+      if (isCurrent) {
+        setIsLoadingSlots(false);
+      }
+    });
+
+    return () => {
+      isCurrent = false;
+    };
+  }, [bookingData.date]);
+
   const handleOpenAppointment = () => {
     setBookingStep(1);
     setBookingSuccessData(null);
     setCalendarSyncSuccess(false);
     setCalendarSyncError(null);
+    setSlotConflictError(null);
     setSyncingCalendar(false);
+    setBookedSlots([]);
     setBookingData({
       firstName: '',
       lastName: '',
@@ -121,57 +173,112 @@ export default function ActionGrid({
     setActiveModal('referrals');
   };
 
-  const handleBookSubmit = (e: React.FormEvent) => {
+  const handleAdvanceStep = async () => {
+    if (bookingStep === 2) {
+      if (!bookingData.date || !bookingData.timeSlot) return;
+
+      setIsLoadingSlots(true);
+      setSlotConflictError(null);
+
+      const check = await checkSlotAvailability(bookingData.date, bookingData.timeSlot);
+      setIsLoadingSlots(false);
+
+      if (!check.available) {
+        setSlotConflictError(check.reason || 'This slot is no longer available. Please select another time slot.');
+        // Refresh booked slots list
+        const updated = await fetchBookedSlotsForDate(bookingData.date);
+        setBookedSlots(updated);
+        setBookingData(prev => ({ ...prev, timeSlot: '' }));
+        return;
+      }
+    }
+
+    setBookingStep(prev => prev + 1);
+  };
+
+  const handleBookSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Simulate API reservation ID
+    setSlotConflictError(null);
+    setIsSubmittingBooking(true);
+
     const randomId = 'BC-' + Math.floor(Math.random() * 900000 + 100000);
+
+    // Persist appointment to Supabase with duplicate slot restriction
+    const result = await saveAppointmentToSupabase({
+      ticketId: randomId,
+      firstName: bookingData.firstName,
+      lastName: bookingData.lastName,
+      email: bookingData.email,
+      phone: bookingData.phone,
+      expertId: bookingData.expertId,
+      serviceId: bookingData.serviceId,
+      date: bookingData.date,
+      timeSlot: bookingData.timeSlot,
+      notes: bookingData.notes,
+      status: 'confirmed'
+    });
+
+    setIsSubmittingBooking(false);
+
+    if (!result.success) {
+      setSlotConflictError(result.error || 'Failed to reserve appointment because this slot is taken.');
+      setBookingStep(2); // Send back to step 2 to choose another time
+      const updated = await fetchBookedSlotsForDate(bookingData.date);
+      setBookedSlots(updated);
+      setBookingData(prev => ({ ...prev, timeSlot: '' }));
+      return;
+    }
+
     setBookingSuccessData({ id: randomId });
     setBookingStep(4);
   };
 
-  const handleSyncToCalendar = async () => {
-    const confirmed = window.confirm("Would you like to sync this BalanceCare Consultation to your Google Calendar?");
-    if (!confirmed) return;
+  const handleOpenGoogleCalendar = () => {
+    const expertName = selectedExpertObj ? selectedExpertObj.name : 'Intake Specialist';
+    const eventDetails = {
+      summary: `BalanceCare Health Consultation: ${bookingData.serviceId}`,
+      description: `Wellness consultation with BalanceCare specialist: ${expertName}.\nProgram: ${bookingData.serviceId}\nNotes: ${bookingData.notes || 'No notes provided.'}\nAssigned Care Advisor: ${expertName}\nDirect Helpline: 410-977-2847`,
+      date: bookingData.date,
+      timeSlot: bookingData.timeSlot,
+      expertName,
+      location: 'BalanceCare Health & Wellness Hub (Columbia, MD / Washington, DC)'
+    };
 
-    setSyncingCalendar(true);
-    setCalendarSyncError(null);
-
-    try {
-      let token = getAccessToken();
-      if (!token) {
-        const result = await googleSignIn();
-        if (result) {
-          token = result.accessToken;
-        }
-      }
-
-      if (!token) {
-        throw new Error("Could not authenticate with Google Calendar. Please make sure to sign in and grant the requested calendar permissions.");
-      }
-
-      const expertName = selectedExpertObj ? selectedExpertObj.name : 'Intake Specialist';
-      const eventDetails = {
-        summary: `BalanceCare Health: ${bookingData.serviceId}`,
-        description: `Your wellness consultation with BalanceCare specialist: ${expertName}. \nProgram: ${bookingData.serviceId}\nNotes: ${bookingData.notes || 'No notes provided.'}\nAssigned Care Advisor: ${expertName}\nHelpline: 410-977-2847`,
-        date: bookingData.date,
-        timeSlot: bookingData.timeSlot,
-        expertName
-      };
-
-      await createCalendarEvent(token, eventDetails);
-      setCalendarSyncSuccess(true);
-    } catch (error: any) {
-      console.error("Google Calendar Sync Error:", error);
-      setCalendarSyncError(error.message || "Failed to sync to Google Calendar.");
-    } finally {
-      setSyncingCalendar(false);
-    }
+    const url = getGoogleCalendarUrl(eventDetails);
+    window.open(url, '_blank', 'noopener,noreferrer');
+    setCalendarSyncSuccess(true);
   };
 
-  const handleReferralSubmit = (e: React.FormEvent) => {
+  const handleDownloadIcs = () => {
+    const expertName = selectedExpertObj ? selectedExpertObj.name : 'Intake Specialist';
+    const eventDetails = {
+      summary: `BalanceCare Health Consultation: ${bookingData.serviceId}`,
+      description: `Wellness consultation with BalanceCare specialist: ${expertName}.\nProgram: ${bookingData.serviceId}\nNotes: ${bookingData.notes || 'No notes provided.'}\nAssigned Care Advisor: ${expertName}\nDirect Helpline: 410-977-2847`,
+      date: bookingData.date,
+      timeSlot: bookingData.timeSlot,
+      expertName,
+      location: 'BalanceCare Health & Wellness Hub (Columbia, MD / Washington, DC)'
+    };
+
+    downloadIcsFile(eventDetails);
+    setCalendarSyncSuccess(true);
+  };
+
+  const handleReferralSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const randomTicket = 'REF-' + Math.floor(Math.random() * 90000 + 10000);
     setReferralSuccessData({ ticket: randomTicket });
+
+    // Persist referral to Supabase
+    await saveReferralToSupabase({
+      ticket: randomTicket,
+      referrerName: referralData.referrerName,
+      referrerContact: referralData.referrerContact,
+      patientName: referralData.patientName,
+      patientContact: referralData.patientContact,
+      serviceNeeded: referralData.serviceNeeded,
+      notes: referralData.notes
+    });
   };
 
   const selectedExpertObj = staffList.find(s => s.id === bookingData.expertId);
@@ -395,14 +502,50 @@ export default function ActionGrid({
                 {/* STEP 2: DATE & TIME */}
                 {bookingStep === 2 && (
                   <motion.div initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} className="space-y-4 flex-grow">
-                    <h4 className="font-bold text-brand-dark text-sm mb-1">Pick a convenient target day &amp; time slot</h4>
+                    <div>
+                      <h4 className="font-bold text-brand-dark text-sm mb-0.5">Pick a convenient target day &amp; time slot</h4>
+                      <p className="text-xs text-brand-muted">Each time slot can only be reserved by one client. Confirmed slots are automatically locked.</p>
+                    </div>
+
+                    {slotConflictError && (
+                      <div className="p-3.5 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-900 flex items-start gap-2.5">
+                        <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                        <div>
+                          <span className="font-bold">Time Slot Unavailable:</span> {slotConflictError}
+                        </div>
+                      </div>
+                    )}
                     
                     <div className="space-y-4">
                       <div>
-                        <label className="block text-[10px] font-bold uppercase tracking-wider text-brand-dark mb-1">Target Consultation Date</label>
+                        <div className="flex items-center justify-between mb-1">
+                          <label className="block text-[10px] font-bold uppercase tracking-wider text-brand-dark">Target Consultation Date</label>
+                          {bookingData.date && (
+                            <span className="text-[11px] font-semibold text-brand-muted">
+                              {isLoadingSlots ? (
+                                <span className="inline-flex items-center gap-1 text-brand-coral">
+                                  <Loader2 className="w-3 h-3 animate-spin" /> Checking live slot availability...
+                                </span>
+                              ) : isDateAdministrativelyBlocked(bookingData.date).blocked ? (
+                                <span className="inline-flex items-center gap-1 text-rose-700 font-bold bg-rose-50 px-2 py-0.5 rounded-full border border-rose-200">
+                                  <Lock className="w-3 h-3 text-rose-600" /> Date Blocked (0 slots available)
+                                </span>
+                              ) : bookedSlots.length >= ALL_STANDARD_TIME_SLOTS.length ? (
+                                <span className="inline-flex items-center gap-1 text-red-600 font-bold bg-red-50 px-2 py-0.5 rounded-full border border-red-200">
+                                  <Lock className="w-3 h-3" /> Fully Booked (0 slots available)
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center gap-1 text-emerald-700 font-bold bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                                  <Sparkles className="w-3 h-3 text-emerald-500" /> {ALL_STANDARD_TIME_SLOTS.length - bookedSlots.length} of {ALL_STANDARD_TIME_SLOTS.length} slots available
+                                </span>
+                              )}
+                            </span>
+                          )}
+                        </div>
                         <input 
                           type="date" 
                           required
+                          min={new Date().toISOString().split('T')[0]}
                           value={bookingData.date}
                           onChange={(e) => setBookingData({ ...bookingData, date: e.target.value })}
                           className="w-full p-3 bg-neutral-50 border border-neutral-200 rounded-xl text-sm text-brand-dark focus:outline-none focus:ring-2 focus:ring-brand-coral"
@@ -410,28 +553,83 @@ export default function ActionGrid({
                       </div>
                       
                       <div>
-                        <label className="block text-[10px] font-bold uppercase tracking-wider text-brand-dark mb-2">Available Time Windows</label>
-                        <div className="grid grid-cols-2 gap-2">
-                          {[
-                            '09:00 AM - 10:00 AM',
-                            '11:30 AM - 12:30 PM',
-                            '02:00 PM - 03:00 PM',
-                            '04:15 PM - 05:15 PM'
-                          ].map((time) => (
-                            <button
-                              key={time}
-                              type="button"
-                              onClick={() => setBookingData({ ...bookingData, timeSlot: time })}
-                              className={`p-3 rounded-xl border text-xs font-semibold transition-all ${
-                                bookingData.timeSlot === time 
-                                  ? 'bg-brand-dark text-white border-brand-dark' 
-                                  : 'border-neutral-200 hover:bg-neutral-50 text-brand-muted bg-white'
-                              }`}
-                            >
-                              {time}
-                            </button>
-                          ))}
+                        <div className="flex items-center justify-between mb-2">
+                          <label className="block text-[10px] font-bold uppercase tracking-wider text-brand-dark">Available Time Windows</label>
+                          {bookingData.date && !isLoadingSlots && !isDateAdministrativelyBlocked(bookingData.date).blocked && bookedSlots.length < ALL_STANDARD_TIME_SLOTS.length && (
+                            <span className="text-[10px] text-brand-muted font-medium">
+                              Open: <strong className="text-emerald-700">{ALL_STANDARD_TIME_SLOTS.filter(t => !bookedSlots.some(b => b.trim().toLowerCase() === t.trim().toLowerCase())).join(' | ')}</strong>
+                            </span>
+                          )}
                         </div>
+                        
+                        {!bookingData.date ? (
+                          <div className="p-4 rounded-xl border border-dashed border-neutral-200 bg-neutral-50 text-center text-xs text-brand-muted">
+                            Please select a consultation date above to view open time slots.
+                          </div>
+                        ) : isDateAdministrativelyBlocked(bookingData.date).blocked ? (
+                          <div className="p-4 rounded-xl border border-rose-200 bg-rose-50 text-center text-xs text-rose-900 space-y-1.5">
+                            <p className="font-bold flex items-center justify-center gap-1 text-rose-800">
+                              <Lock className="w-4 h-4 text-rose-600" /> 
+                              {isDateAdministrativelyBlocked(bookingData.date).reason || 'This date is administratively blocked.'}
+                            </p>
+                            <p className="text-[11px] text-rose-700">No appointments can be reserved on this date. Please pick an alternative open date on the calendar above.</p>
+                          </div>
+                        ) : bookedSlots.length >= ALL_STANDARD_TIME_SLOTS.length ? (
+                          <div className="p-4 rounded-xl border border-red-200 bg-red-50 text-center text-xs text-red-800 space-y-1">
+                            <p className="font-bold">⚠️ All consultation slots for this date are fully reserved in our database.</p>
+                            <p className="text-[11px] text-red-700">Please choose another date on the calendar above to find open availability.</p>
+                          </div>
+                        ) : (
+                          <div className="space-y-2">
+                            <div className="grid grid-cols-2 gap-2">
+                              {ALL_STANDARD_TIME_SLOTS.map((time) => {
+                                const isTaken = bookedSlots.some(s => s.trim().toLowerCase() === time.trim().toLowerCase());
+                                const isSelected = bookingData.timeSlot === time;
+
+                                return (
+                                  <button
+                                    key={time}
+                                    type="button"
+                                    disabled={isTaken}
+                                    onClick={() => {
+                                      if (!isTaken) {
+                                        setSlotConflictError(null);
+                                        setBookingData({ ...bookingData, timeSlot: time });
+                                      }
+                                    }}
+                                    className={`p-3 rounded-xl border text-xs font-semibold transition-all relative text-left flex items-center justify-between ${
+                                      isTaken
+                                        ? 'bg-neutral-100/90 text-neutral-400 border-neutral-200 cursor-not-allowed opacity-60'
+                                        : isSelected 
+                                          ? 'bg-brand-dark text-white border-brand-dark shadow-sm ring-2 ring-brand-coral/30' 
+                                          : 'border-emerald-200/80 hover:bg-emerald-50/50 text-brand-dark bg-white hover:border-emerald-300'
+                                    }`}
+                                  >
+                                    <div className="flex flex-col">
+                                      <span className={isTaken ? 'line-through text-neutral-400' : 'font-bold'}>{time}</span>
+                                      <span className={`text-[9px] font-medium ${isTaken ? 'text-rose-600 font-semibold' : isSelected ? 'text-brand-coral' : 'text-emerald-600'}`}>
+                                        {isTaken ? 'Taken (Reserved in DB)' : 'Available for booking'}
+                                      </span>
+                                    </div>
+                                    {isTaken ? (
+                                      <span className="inline-flex items-center gap-1 text-[10px] font-bold bg-neutral-200 text-neutral-700 px-1.5 py-0.5 rounded shrink-0 border border-neutral-300">
+                                        <Lock className="w-2.5 h-2.5 text-neutral-600" /> Taken
+                                      </span>
+                                    ) : isSelected ? (
+                                      <span className="inline-flex items-center gap-1 text-[10px] font-bold bg-white text-brand-dark px-1.5 py-0.5 rounded shrink-0 shadow-xs">
+                                        <Check className="w-3 h-3 text-brand-coral" /> Selected
+                                      </span>
+                                    ) : (
+                                      <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded shrink-0">
+                                        Open
+                                      </span>
+                                    )}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        )}
                       </div>
                     </div>
                   </motion.div>
@@ -542,69 +740,59 @@ export default function ActionGrid({
                       </div>
                     </div>
 
-                    {/* Google Calendar Sync Card */}
+                    {/* Calendar Sync Card */}
                     <div className="w-full max-w-xs bg-brand-bg rounded-2xl border border-neutral-200 p-5 text-left text-xs space-y-3.5">
                       <div className="flex items-center gap-2">
                         <Calendar className="w-4 h-4 text-brand-coral" />
-                        <span className="font-bold text-brand-dark">Google Calendar Sync</span>
+                        <span className="font-bold text-brand-dark">Add to Personal Calendar</span>
                       </div>
                       
                       <p className="text-[11px] text-brand-muted leading-relaxed">
-                        Add this appointment to your personal calendar to receive automatic reminders and sync across your devices.
+                        Add this appointment to your Google, Apple, or Outlook calendar to receive reminders across your devices.
                       </p>
 
-                      {calendarSyncSuccess ? (
+                      <div className="space-y-2">
+                        <button
+                          type="button"
+                          onClick={handleOpenGoogleCalendar}
+                          className="w-full py-2.5 px-4 rounded-xl font-bold transition-all flex items-center justify-center gap-2 text-[11px] cursor-pointer bg-white border border-neutral-200 text-brand-dark hover:bg-neutral-50 shadow-sm hover:border-neutral-300"
+                        >
+                          <svg className="w-3.5 h-3.5" viewBox="0 0 24 24">
+                            <path
+                              fill="#4285F4"
+                              d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+                            />
+                            <path
+                              fill="#34A853"
+                              d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                            />
+                            <path
+                              fill="#FBBC05"
+                              d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22c-.62-.62-1.05-1.37-1.38-2.15z"
+                            />
+                            <path
+                              fill="#EA4335"
+                              d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
+                            />
+                          </svg>
+                          <span>Add to Google Calendar</span>
+                          <ExternalLink className="w-3 h-3 ml-auto text-brand-muted" />
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={handleDownloadIcs}
+                          className="w-full py-2.5 px-4 rounded-xl font-bold transition-all flex items-center justify-center gap-2 text-[11px] cursor-pointer bg-white border border-neutral-200 text-brand-dark hover:bg-neutral-50 shadow-sm hover:border-neutral-300"
+                        >
+                          <Download className="w-3.5 h-3.5 text-brand-blue" />
+                          <span>Download .ics (Apple / Outlook)</span>
+                        </button>
+                      </div>
+
+                      {calendarSyncSuccess && (
                         <div className="flex items-center gap-2 text-emerald-600 bg-emerald-50 border border-emerald-100 p-2.5 rounded-xl">
                           <Check className="w-4 h-4 shrink-0" />
-                          <span className="font-bold text-[11px]">Synced to Google Calendar!</span>
-                        </div>
-                      ) : (
-                        <div>
-                          <button
-                            type="button"
-                            onClick={handleSyncToCalendar}
-                            disabled={syncingCalendar}
-                            className={`w-full py-2.5 px-4 rounded-xl font-bold transition-all flex items-center justify-center gap-2 text-[11px] cursor-pointer ${
-                              syncingCalendar
-                                ? 'bg-neutral-100 text-neutral-400 border border-neutral-200'
-                                : 'bg-white border border-neutral-200 text-brand-dark hover:bg-neutral-50 shadow-sm hover:border-neutral-300'
-                            }`}
-                          >
-                            {syncingCalendar ? (
-                              <>
-                                <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                                <span>Syncing...</span>
-                              </>
-                            ) : (
-                              <>
-                                <svg className="w-3.5 h-3.5" viewBox="0 0 24 24">
-                                  <path
-                                    fill="#4285F4"
-                                    d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-                                  />
-                                  <path
-                                    fill="#34A853"
-                                    d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-                                  />
-                                  <path
-                                    fill="#FBBC05"
-                                    d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22c-.62-.62-1.05-1.37-1.38-2.15z"
-                                  />
-                                  <path
-                                    fill="#EA4335"
-                                    d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
-                                  />
-                                </svg>
-                                <span>Sync to Google Calendar</span>
-                              </>
-                            )}
-                          </button>
-
-                          {calendarSyncError && (
-                            <p className="mt-2 text-[10px] text-rose-500 font-semibold leading-relaxed">
-                              ⚠️ {calendarSyncError}
-                            </p>
-                          )}
+                          <span className="font-bold text-[11px]">Calendar event generated!</span>
                         </div>
                       )}
                     </div>
@@ -628,23 +816,42 @@ export default function ActionGrid({
                       type="button" 
                       disabled={
                         (bookingStep === 1 && !bookingData.serviceId) ||
-                        (bookingStep === 2 && (!bookingData.date || !bookingData.timeSlot))
+                        (bookingStep === 2 && (!bookingData.date || !bookingData.timeSlot || isLoadingSlots))
                       }
-                      onClick={() => setBookingStep(bookingStep + 1)}
-                      className={`flex-1 py-3 px-4 text-white font-bold text-xs rounded-xl transition-all ${
-                        ((bookingStep === 1 && !bookingData.serviceId) || (bookingStep === 2 && (!bookingData.date || !bookingData.timeSlot)))
+                      onClick={handleAdvanceStep}
+                      className={`flex-1 py-3 px-4 text-white font-bold text-xs rounded-xl transition-all flex items-center justify-center gap-1.5 ${
+                        ((bookingStep === 1 && !bookingData.serviceId) || (bookingStep === 2 && (!bookingData.date || !bookingData.timeSlot || isLoadingSlots)))
                           ? 'bg-neutral-300 cursor-not-allowed'
                           : 'bg-gradient-to-r from-brand-green to-brand-blue hover:from-brand-greenHover hover:to-brand-blueHover shadow-sm'
                       }`}
                     >
-                      Continue
+                      {isLoadingSlots ? (
+                        <>
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          <span>Checking...</span>
+                        </>
+                      ) : (
+                        <span>Continue</span>
+                      )}
                     </button>
                   ) : bookingStep === 3 ? (
                     <button 
                       type="submit"
-                      className="flex-1 py-3 px-4 bg-brand-dark hover:bg-black text-white font-bold text-xs rounded-xl transition-colors shadow-sm"
+                      disabled={isSubmittingBooking}
+                      className={`flex-1 py-3 px-4 text-white font-bold text-xs rounded-xl transition-colors shadow-sm flex items-center justify-center gap-1.5 ${
+                        isSubmittingBooking 
+                          ? 'bg-neutral-400 cursor-not-allowed' 
+                          : 'bg-brand-dark hover:bg-black'
+                      }`}
                     >
-                      Reserve Consultation
+                      {isSubmittingBooking ? (
+                        <>
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          <span>Securing Reservation...</span>
+                        </>
+                      ) : (
+                        <span>Reserve Consultation</span>
+                      )}
                     </button>
                   ) : (
                     <button 
