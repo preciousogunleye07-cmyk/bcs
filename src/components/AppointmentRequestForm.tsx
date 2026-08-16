@@ -632,9 +632,17 @@ export default function AppointmentRequestForm({
           >
             ← Return to Home
           </a>
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-brand-muted">Helpline:</span>
-            <a href="tel:410-977-2847" className="text-xs font-bold text-brand-dark hover:text-brand-coral">410-977-2847</a>
+          <div className="flex items-center gap-4">
+            <img 
+              src="https://plain-weur-prod-public.komododecks.com/202606/30/bEWa4J3Aw82gY8ZvTqLN/image.png"
+              alt="BalanceCare Logo"
+              className="h-7 w-auto object-contain hidden sm:block"
+              referrerPolicy="no-referrer"
+            />
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-brand-muted">Helpline:</span>
+              <a href="tel:410-977-2847" className="text-xs font-bold text-brand-dark hover:text-brand-coral">410-977-2847</a>
+            </div>
           </div>
         </div>
 

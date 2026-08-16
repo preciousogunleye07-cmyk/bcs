@@ -183,8 +183,11 @@ export default function App() {
               >
                 <img 
                   src="https://plain-weur-prod-public.komododecks.com/202606/30/bEWa4J3Aw82gY8ZvTqLN/image.png"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).src = '/logo.png';
+                  }}
                   alt="BalanceCare Logo"
-                  className="h-9 w-auto object-contain transition-transform group-hover:scale-105"
+                  className="h-9 sm:h-10 w-auto object-contain transition-transform group-hover:scale-105"
                   referrerPolicy="no-referrer"
                 />
               </button>
