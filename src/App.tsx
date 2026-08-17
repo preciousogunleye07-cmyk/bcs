@@ -291,13 +291,14 @@ export default function App() {
             <div className="hidden md:block">
               <a 
                 href="/request-appointment"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 bg-gradient-to-r from-brand-green to-brand-blue hover:from-brand-greenHover hover:to-brand-blueHover text-white px-6 py-3 rounded-full text-sm font-bold shadow-md shadow-brand-blue/15 hover:shadow-brand-blue/30 transition-all cursor-pointer"
+                onClick={(e) => {
+                  e.preventDefault();
+                  setIsRequestModalOpen(true);
+                }}
+                className="inline-flex items-center gap-2 bg-gradient-to-r from-brand-green to-brand-blue hover:from-brand-greenHover hover:to-brand-blueHover text-white px-6 py-3 rounded-full text-sm font-bold shadow-md shadow-brand-blue/20 hover:shadow-brand-blue/35 transition-all transform hover:-translate-y-0.5 active:translate-y-0 cursor-pointer"
               >
                 <MessageSquare className="w-4 h-4" />
                 <span>Request Appointment</span>
-                <ExternalLink className="w-3.5 h-3.5 opacity-80" />
               </a>
             </div>
 
@@ -359,13 +360,15 @@ export default function App() {
               </button>
               <a 
                 href="/request-appointment"
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={() => setMobileMenuOpen(false)}
-                className="block w-full text-center py-4 bg-gradient-to-r from-brand-green to-brand-blue hover:from-brand-greenHover hover:to-brand-blueHover text-white font-bold rounded-2xl text-base mt-4 shadow-sm cursor-pointer inline-flex items-center justify-center gap-2"
+                onClick={(e) => {
+                  e.preventDefault();
+                  setMobileMenuOpen(false);
+                  setIsRequestModalOpen(true);
+                }}
+                className="block w-full text-center py-4 bg-gradient-to-r from-brand-green to-brand-blue hover:from-brand-greenHover hover:to-brand-blueHover text-white font-bold rounded-2xl text-base mt-4 shadow-sm cursor-pointer inline-flex items-center justify-center gap-2 transform active:scale-98 transition-transform"
               >
+                <MessageSquare className="w-4 h-4" />
                 <span>Request Appointment</span>
-                <ExternalLink className="w-4 h-4" />
               </a>
             </motion.div>
           )}
